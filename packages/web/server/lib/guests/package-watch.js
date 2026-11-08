@@ -43,6 +43,7 @@ const loadedFiles = async (root, fs) => {
     resolveAttachEntry(contributes),
     resolvePageEntry(contributes),
     resolveStatusSectionEntry(contributes),
+    contributes.headerItem?.entry,
     ...(contributes.fileEditors ?? []).map((editor) => editor.entry),
   ].filter(Boolean);
   for (const page of pages) {

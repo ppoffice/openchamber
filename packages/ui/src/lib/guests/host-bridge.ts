@@ -410,6 +410,9 @@ export const answerGuestMessage = async (
     case 'resize':
       effects.resize(message.payload.height);
       return okResult(message.id);
+    // No surface sizes its frame from a width yet, and `ready` does not advertise `headerWidth`.
+    case 'width':
+      return errorResult(message.id, 'This host does not size header frames.', 'UNSUPPORTED');
     case 'resolve-result':
       effects.resolveResult(message.id, message.payload);
       return null;

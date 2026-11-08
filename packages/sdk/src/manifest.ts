@@ -88,6 +88,22 @@ export const GUEST_STATUS_SECTION_HEIGHT_MAX = 320;
 /** Frame height before the manifest or the guest says otherwise. */
 export const GUEST_STATUS_SECTION_HEIGHT_DEFAULT = 120;
 
+/**
+ * A strip in the app header, left of the context usage ring. `entry` is
+ * package HTML, a frame of its own like a status section's. The header fixes
+ * the height; the guest asks for a width with `setWidth`.
+ */
+export type HeaderItemContribution = {
+  entry: string;
+};
+
+/** Narrowest width a header item frame may ask for, in CSS px. */
+export const GUEST_HEADER_ITEM_WIDTH_MIN = 24;
+/** Widest width a header item frame may ask for, in CSS px. */
+export const GUEST_HEADER_ITEM_WIDTH_MAX = 480;
+/** Height of a header item frame, in CSS px; the header sets it. */
+export const GUEST_HEADER_ITEM_HEIGHT = 28;
+
 export type GuestActionWhere = 'message' | 'session' | 'selection' | 'file' | 'diff';
 export type GuestActionRole = 'user' | 'assistant';
 /** What a session action wants alongside the session id and title. */
@@ -929,6 +945,8 @@ export type OpenChamberContributes = {
   page?: PageContribution;
   /** A section in the chat's Work Status panel. */
   statusSection?: StatusSectionContribution;
+  /** A strip in the app header. */
+  headerItem?: HeaderItemContribution;
   capabilities?: DeclaredGuestCapability[];
   integration?: IntegrationContribution;
   service?: ServiceContribution;
@@ -1085,6 +1103,12 @@ export const clampStatusSectionHeight = (height: number): number => {
   return Math.min(GUEST_STATUS_SECTION_HEIGHT_MAX, Math.max(GUEST_STATUS_SECTION_HEIGHT_MIN, Math.round(height)));
 };
 
+/** Clamp a header item width to `GUEST_HEADER_ITEM_WIDTH_MIN`..`MAX`, rounded up to whole CSS px; a non-number gives the minimum. */
+export const clampHeaderItemWidth = (width: number): number => {
+  if (!Number.isFinite(width)) return GUEST_HEADER_ITEM_WIDTH_MIN;
+  return Math.min(GUEST_HEADER_ITEM_WIDTH_MAX, Math.max(GUEST_HEADER_ITEM_WIDTH_MIN, Math.ceil(width)));
+};
+
 export type OpenChamberEngines = {
   openchamber: string;
 };
@@ -1116,6 +1140,7 @@ export type ParseManifestErrorCode =
   | 'invalid-attach'
   | 'invalid-page'
   | 'invalid-status-section'
+  | 'invalid-header-item'
   | 'invalid-session-events'
   | 'invalid-session-control'
   | 'invalid-instructions'

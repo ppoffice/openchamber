@@ -52,6 +52,9 @@ import {
   GUEST_BLOCK_ANSWER_MAX,
 } from './contract.ts';
 import { GUEST_FILE_EDITOR_CONTENT_MAX, GUEST_FILE_EDITOR_VERSION_MAX } from './file-editor.ts';
+import { GUEST_HEADER_ITEM_WIDTH_MAX, GUEST_HEADER_ITEM_WIDTH_MIN } from './manifest.ts';
+
+const headerItemWidthSchema = z.number().int().min(GUEST_HEADER_ITEM_WIDTH_MIN).max(GUEST_HEADER_ITEM_WIDTH_MAX);
 
 // Structured clone recreates a frame's Uint8Array in the receiving realm, so
 // `instanceof` holds for bytes that crossed postMessage.
@@ -283,7 +286,7 @@ const readyPayloadSchema = z.object({
   locale: z.string().min(1),
   directory: z.string().nullable(),
   session: sessionSnapshotSchema,
-  surface: z.enum(['panel', 'dialog', 'page', 'background', 'status', 'file', 'popover', 'block']),
+  surface: z.enum(['panel', 'dialog', 'page', 'background', 'status', 'file', 'popover', 'block', 'header']),
   connection: guestConnectionSchema,
   settings: guestSettingsSchema,
   item: guestItemSchema,
@@ -294,6 +297,7 @@ const readyPayloadSchema = z.object({
     statusControls: z.literal(true).optional(),
     popovers: z.literal(true).optional(),
     lateGenerateResults: z.literal(true).optional(),
+    headerWidth: z.literal(true).optional(),
   }).optional(),
 });
 
@@ -694,6 +698,15 @@ export const guestMessageSchema = z.discriminatedUnion('type', [
     payload: z.object({
       height: z.number().int().min(0).max(GUEST_FRAME_HEIGHT_MAX),
     }),
+  }),
+  z.object({
+    ...envelope,
+    type: z.literal('width'),
+    id: z.string().min(1),
+    payload: z.object({
+      preferred: headerItemWidthSchema,
+      min: headerItemWidthSchema,
+    }).refine((request) => request.min <= request.preferred),
   }),
   z.object({
     ...envelope,

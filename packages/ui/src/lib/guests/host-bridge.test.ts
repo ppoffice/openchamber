@@ -677,6 +677,13 @@ describe('badge and resolve-result', () => {
     expect(reply).toMatchObject({ type: 'result', ok: false, code: 'UNSUPPORTED' });
   });
 
+  test('refuses a header width while no surface sizes frames from it', async () => {
+    const reply = await answerGuestMessage({
+      channel: OPENCHAMBER_SDK_CHANNEL, v: 1, type: 'width', id: 'width-call', payload: { preferred: 200, min: 60 },
+    }, effects());
+    expect(reply).toMatchObject({ type: 'result', id: 'width-call', ok: false, code: 'UNSUPPORTED' });
+  });
+
   test('badge sets the count and answers ok', async () => {
     const seen: Array<number | null> = [];
     const reply = await answerGuestMessage({

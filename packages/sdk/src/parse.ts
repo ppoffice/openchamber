@@ -613,6 +613,9 @@ const contributesSchema = z.object({
     defaultExpanded: z.boolean().optional(),
     requiresProject: z.boolean().optional(),
   }).refine((section) => section.entry !== undefined || section.source !== undefined)]).optional(),
+  headerItem: z.object({
+    entry: z.string().trim().refine((value) => isSafeAssetPath(value) && value.toLowerCase().endsWith('.html')),
+  }).optional(),
   capabilities: z.array(z.enum(DECLARED_GUEST_CAPABILITIES)).max(8).optional(),
   integration: integrationSchema.optional(),
   service: serviceSchema.optional(),
@@ -812,8 +815,8 @@ export const openChamberManifestSchema = z.object({
       });
       return;
     }
-    if (hasStatusFrame(contributes) || contributes.fileEditors || contributes.blocks) {
-      // A status section, file editor or block frame runs code and may use what
+    if (hasStatusFrame(contributes) || contributes.headerItem || contributes.fileEditors || contributes.blocks) {
+      // A status section, header item, file editor or block frame runs code and may use what
       // the package is granted, but it only hosts itself: things the host opens
       // or invokes elsewhere need a panel or background entry.
       const needsFrame = [];
@@ -823,7 +826,7 @@ export const openChamberManifestSchema = z.object({
       if (contributes.commands !== undefined) needsFrame.push('commands');
       if (needsFrame.length > 0) ctx.addIssue({
         code: 'custom', path: ['panel'],
-        message: `${needsFrame.map((key) => `contributes.${key}`).join(', ')} needs panel.entry or background.entry; a status section, file editor or block only hosts itself.`,
+        message: `${needsFrame.map((key) => `contributes.${key}`).join(', ')} needs panel.entry or background.entry; a status section, header item, file editor or block only hosts itself.`,
       });
       return;
     }
@@ -950,6 +953,9 @@ const failureFromIssue = (issue: { path: ReadonlyArray<PropertyKey>; code: strin
     return fail('invalid-status-section', issue.code === 'custom'
       ? issue.message
       : `contributes.statusSection must be true or { entry?: "<package .html>", source?: { path: "/status", interval?: ${GUEST_STATUS_SOURCE_INTERVAL_MIN} to ${GUEST_STATUS_SOURCE_INTERVAL_MAX} }, title?: "1 to ${GUEST_STATUS_SECTION_TITLE_MAX} characters", height?: ${GUEST_STATUS_SECTION_HEIGHT_MIN} to ${GUEST_STATUS_SECTION_HEIGHT_MAX} } with entry, source, or both.`);
+  }
+  if (path === 'contributes.headerItem' || path.startsWith('contributes.headerItem.')) {
+    return fail('invalid-header-item', 'contributes.headerItem is { entry: "<package .html>" }.');
   }
   if (path === 'contributes.background' || path.startsWith('contributes.background.')) {
     return fail('invalid-background', 'contributes.background needs an entry ending in .html inside the package.');

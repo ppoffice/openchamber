@@ -276,6 +276,13 @@ describe('parseGuestCatalogJson', () => {
     expect(readGuests(JSON.stringify({ guests: [{ ...row, statusEntry: 'status/index.html', statusHeight: 4000 }] }))).toBeNull();
   });
 
+  test('keeps a header item without a panel entry and refuses an empty one', () => {
+    const row = { id: 'usage-strip', name: 'Usage strip', icon: 'dashboard', capabilities: { requested: [], granted: [] } };
+    expect(readGuests(JSON.stringify({ guests: [{ ...row, headerEntry: 'header/index.html' }] })))
+      .toEqual([{ ...row, headerEntry: 'header/index.html' }]);
+    expect(readGuests(JSON.stringify({ guests: [{ ...row, headerEntry: '' }] }))).toBeNull();
+  });
+
   test('keeps a source status section and refuses a path or interval the SDK would not', () => {
     const row = { id: 'monitor', name: 'Monitor', icon: 'pulse', capabilities: { requested: [], granted: [] } };
     const statusSource = { path: '/status', interval: 2000 };

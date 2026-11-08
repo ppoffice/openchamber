@@ -301,6 +301,31 @@ describe('page-less packages', () => {
     } finally { await fs.rm(dir, { recursive: true, force: true }); }
   });
 
+  test('a header-item-only package validates its HTML and scripts, publishes headerEntry, and counts as a frame', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'oc-header-'));
+    try {
+      await fs.writeFile(path.join(dir, 'package.json'), JSON.stringify({ version: '1.0.0', openchamber: {
+        apiVersion: 1, contributes: {
+          panel: { id: 'usage-strip', name: 'Usage strip', icon: 'dashboard' },
+          headerItem: { entry: 'header/index.html' },
+        },
+      } }));
+      expect(await inspectGuestPackage(dir)).toMatchObject({ ok: false, code: 'invalid-manifest' });
+      await fs.mkdir(path.join(dir, 'header'));
+      await fs.writeFile(path.join(dir, 'header/index.html'), '<script src="main.js"></script>');
+      expect(await inspectGuestPackage(dir)).toMatchObject({ ok: false, code: 'missing-build' });
+      await fs.writeFile(path.join(dir, 'header/main.js'), 'console.log("header")');
+      const inspected = await inspectGuestPackage(dir);
+      expect(inspected.ok).toBe(true);
+      expect(hasGuestFrame(inspected.guest)).toBe(true);
+      const row = toPublicGuest(inspected.guest);
+      expect(row).toMatchObject({ headerEntry: 'header/index.html' });
+      expect(row).not.toHaveProperty('entry');
+      expect(row).not.toHaveProperty('statusEntry');
+      expect(await resolveGuestServedFile(dir, 'header/main.js', { hasRuntime: hasGuestFrame(inspected.guest) })).not.toBeNull();
+    } finally { await fs.rm(dir, { recursive: true, force: true }); }
+  });
+
   test('a file-editor-only package validates each editor page, publishes the editors, and counts as a frame', async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'oc-file-editor-'));
     try {
