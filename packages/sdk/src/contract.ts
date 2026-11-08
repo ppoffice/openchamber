@@ -5,6 +5,7 @@ import type { GuestRunningShellsSnapshot, GuestShellOutputRequest, GuestShellOut
 import type { GuestSessionWorktree, GuestStorageRequest, GuestStorageResult, GuestWorkspaceQuery, GuestWorkspaceSnapshot, GuestWorkspaceSubscription, GuestWorkspaceUpdate, GuestWorktree } from './workspace.ts';
 import type { GuestStatusControl, GuestStatusControlEvent } from './status-controls.ts';
 import type { GuestPopoverClosedEvent, GuestPopoverContext, GuestPopoverRequest } from './popover.ts';
+import type { GuestUsageSnapshot } from './usage.ts';
 
 export type HostThemeMode = 'light' | 'dark';
 
@@ -253,6 +254,8 @@ export type HostReadyContext = {
     popovers?: true;
     /** The host keeps `generate` answers that arrive after their frame is gone (`onLateGenerateResult`). */
     lateGenerateResults?: true;
+    /** The host serves the provider usage feed (`onUsage`, `refreshUsage`, `openUsageSettings`). */
+    usage?: true;
   };
 };
 
@@ -699,9 +702,13 @@ export type HostResultMessage = Envelope & { type: 'result'; id: string } & (
 
 export type HostShellsMessage = Envelope & { type: 'shells'; payload: { subscriptionId: string; snapshot: GuestRunningShellsSnapshot } };
 
+/** The provider usage feed; pushed after `usage-subscribe` and on every change. */
+export type HostUsageMessage = Envelope & { type: 'usage'; payload: { snapshot: GuestUsageSnapshot } };
+
 export type HostMessage =
   | (Envelope & { type: 'workspace'; payload: GuestWorkspaceUpdate })
   | HostShellsMessage
+  | HostUsageMessage
   | HostReadyMessage
   | HostDirectoryMessage
   | HostSessionMessage
@@ -750,6 +757,12 @@ export type GuestBadgeMessage = GuestCall<'badge', BadgeRequest>;
 export type GuestResizeMessage = GuestCall<'resize', ResizeRequest>;
 export type GuestOpenCommitMessage = GuestCall<'open-commit', OpenCommitRequest>;
 export type GuestStatusControlsMessage = GuestCall<'status-controls', { controls: GuestStatusControl[] }>;
+/** Starts the usage feed; the host answers `ok` and pushes `usage` from then on. */
+export type GuestUsageSubscribeMessage = GuestCall<'usage-subscribe'>;
+/** Asks the host to refetch now; the answer arrives when the refetch settled. */
+export type GuestUsageRefreshMessage = GuestCall<'usage-refresh'>;
+/** Asks the host to open Settings → Usage. */
+export type GuestOpenUsageSettingsMessage = GuestCall<'open-usage-settings'>;
 export type GuestPopoverOpenMessage = GuestCall<'popover-open', GuestPopoverRequest>;
 export type GuestPopoverCloseMessage = GuestCall<'popover-close', { id: string; reason?: 'closed' | 'escape' }>;
 export type GuestPopoverAnchorMessage = GuestCall<'popover-anchor', { id: string; active: boolean }>;
@@ -809,6 +822,9 @@ export type GuestMessage =
   | GuestResizeMessage
   | GuestOpenCommitMessage
   | GuestStatusControlsMessage
+  | GuestUsageSubscribeMessage
+  | GuestUsageRefreshMessage
+  | GuestOpenUsageSettingsMessage
   | GuestPopoverOpenMessage
   | GuestPopoverCloseMessage
   | GuestPopoverAnchorMessage
@@ -857,6 +873,7 @@ export const isGenerateResult = (
 const HOST_PUSH_TYPES: ReadonlySet<string> = new Set([
   'workspace',
   'shells',
+  'usage',
   'ready', 'directory', 'session', 'connection', 'settings', 'session-lifecycle', 'item', 'resolve', 'action', 'service-event',
   'status-control-event', 'popover-closed',
   'file-open', 'file-snapshot', 'file-saved',

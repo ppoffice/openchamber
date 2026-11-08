@@ -276,6 +276,12 @@ export const answerGuestMessage = async (
     case 'shell-stop': return okResult(message.id, await effects.shellStop(message.payload));
     case 'storage': return okResult(message.id, await effects.storage(message.payload));
     case 'status-controls': effects.setStatusControls(message.payload.controls); return okResult(message.id);
+    // The usage feed is served by the pane in a later change; until then every
+    // request is refused the way an old host refuses it.
+    case 'usage-subscribe':
+    case 'usage-refresh':
+    case 'open-usage-settings':
+      return errorResult(message.id, 'This host does not support the usage feed.', 'UNSUPPORTED');
     case 'open-session': effects.openSession(message.payload.sessionId); return okResult(message.id);
     // No answer: the pane handles these itself. File editor traffic belongs to
     // its file channel, not to a request/result pair.

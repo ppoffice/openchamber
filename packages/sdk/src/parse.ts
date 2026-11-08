@@ -939,7 +939,7 @@ const failureFromIssue = (issue: { path: ReadonlyArray<PropertyKey>; code: strin
     case 'contributes.panel.size':
       return fail('invalid-panel', `panel.size is a whole number of CSS pixels from ${GUEST_SURFACE_DOCK_SIZE_MIN} to ${GUEST_SURFACE_DOCK_SIZE_MAX}.`);
     case 'contributes.capabilities':
-      return fail('invalid-capabilities', 'contributes.capabilities may list "prompt", "sessions", and "files".');
+      return fail('invalid-capabilities', 'contributes.capabilities may list "prompt", "sessions", "files", "model", "shells", or "usage".');
     default:
       break;
   }
@@ -961,7 +961,7 @@ const failureFromIssue = (issue: { path: ReadonlyArray<PropertyKey>; code: strin
     );
   }
   if (path.startsWith('contributes.capabilities')) {
-    return fail('invalid-capabilities', 'contributes.capabilities may list "prompt", "sessions", and "files".');
+    return fail('invalid-capabilities', 'contributes.capabilities may list "prompt", "sessions", "files", "model", "shells", or "usage".');
   }
   if (path.startsWith('contributes.filesystem')) {
     return fail(

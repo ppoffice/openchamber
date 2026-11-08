@@ -15,6 +15,7 @@ import {
   type HostMessage,
 } from './contract.ts';
 import { GUEST_SHELL_OUTPUT_TAIL_MAX } from './shells.ts';
+import type { GuestUsageSnapshot } from './usage.ts';
 
 type Listener = (event: Event) => void;
 
@@ -248,6 +249,102 @@ describe('connectHost', () => {
     channel: OPENCHAMBER_SDK_CHANNEL, v: 1, type: 'action', id: 'action-1',
     payload: { kind: 'message', action: 'count', sessionId: 's1', sessionTitle: 'Session', directory: '/repo', messageId: 'm1', role: 'assistant', text: 'Hello' },
   };
+
+  const usageSnapshot: GuestUsageSnapshot = {
+    displayMode: 'usage',
+    updatedAt: 1_700_000_000_000,
+    loading: false,
+    providers: [{
+      id: 'codex',
+      name: 'Codex',
+      icon: 'data:image/svg+xml;base64,PHN2Zy8+',
+      ok: true,
+      configured: true,
+      status: null,
+      shown: true,
+      windows: [{
+        key: 'session',
+        label: 'Session',
+        usedPercent: 42,
+        remainingPercent: 58,
+        resetAt: 1_700_000_000_000,
+        resetLabel: 'in 3 h',
+        valueLabel: null,
+        tone: 'default',
+      }],
+      models: [],
+    }],
+  };
+  const usageReady = (): HostMessage => ({
+    ...ready,
+    payload: { ...ready.payload, features: { usage: true } },
+  });
+
+  test('refuses usage calls on a host that does not advertise the feed', async () => {
+    const frame = createFrame();
+    const host = connectHost({ target: frame, acceptSource: () => true });
+    await expect(host.refreshUsage()).rejects.toMatchObject({ code: 'UNSUPPORTED' });
+    await expect(host.openUsageSettings()).rejects.toMatchObject({ code: 'UNSUPPORTED' });
+    const remove = host.onUsage(() => {});
+    expect(frame.posted.some((message) => message.type === 'usage-subscribe')).toBe(false);
+    remove();
+    host.dispose();
+  });
+
+  test('subscribes once on the first listener, drops an invalid push, and replays the last snapshot', () => {
+    const frame = createFrame();
+    const host = connectHost({ target: frame, acceptSource: () => true });
+    const early: GuestUsageSnapshot[] = [];
+    const removeEarly = host.onUsage((snapshot) => early.push(snapshot));
+    expect(frame.posted.some((message) => message.type === 'usage-subscribe')).toBe(false);
+
+    frame.dispatch(new MessageEvent('message', { data: usageReady() }));
+    const subscribe = frame.posted.find((message) => message.type === 'usage-subscribe');
+    if (subscribe?.type !== 'usage-subscribe') throw new Error('Expected usage subscription');
+    expect(frame.posted.filter((message) => message.type === 'usage-subscribe')).toHaveLength(1);
+    frame.dispatch(new MessageEvent('message', { data: { channel: OPENCHAMBER_SDK_CHANNEL, v: 1, type: 'result', id: subscribe.id, ok: true } }));
+
+    frame.dispatch(new MessageEvent('message', { data: { channel: OPENCHAMBER_SDK_CHANNEL, v: 1, type: 'usage',
+      payload: { snapshot: { ...usageSnapshot, providers: [{ ...usageSnapshot.providers[0], name: 'x'.repeat(121) }] } } } }));
+    expect(early).toEqual([]);
+
+    frame.dispatch(new MessageEvent('message', { data: { channel: OPENCHAMBER_SDK_CHANNEL, v: 1, type: 'usage', payload: { snapshot: usageSnapshot } } }));
+    expect(early).toEqual([usageSnapshot]);
+
+    const late: GuestUsageSnapshot[] = [];
+    const removeLate = host.onUsage((snapshot) => late.push(snapshot));
+    expect(late).toEqual([usageSnapshot]);
+    expect(frame.posted.filter((message) => message.type === 'usage-subscribe')).toHaveLength(1);
+    removeEarly();
+    removeLate();
+    expect(frame.posted.some((message) => message.type === 'usage-unsubscribe')).toBe(false);
+    host.dispose();
+  });
+
+  test('refreshUsage and openUsageSettings post after the feature is advertised and pass a refusal through', async () => {
+    const frame = createFrame();
+    const host = connectHost({ target: frame, acceptSource: () => true });
+    frame.dispatch(new MessageEvent('message', { data: usageReady() }));
+
+    const refresh = host.refreshUsage();
+    const refreshMessage = frame.posted.at(-1);
+    if (refreshMessage?.type !== 'usage-refresh') throw new Error('Expected usage refresh');
+    frame.dispatch(new MessageEvent('message', { data: { channel: OPENCHAMBER_SDK_CHANNEL, v: 1, type: 'result', id: refreshMessage.id, ok: true } }));
+    await refresh;
+
+    const settings = host.openUsageSettings();
+    const settingsMessage = frame.posted.at(-1);
+    if (settingsMessage?.type !== 'open-usage-settings') throw new Error('Expected open-usage-settings');
+    frame.dispatch(new MessageEvent('message', { data: { channel: OPENCHAMBER_SDK_CHANNEL, v: 1, type: 'result', id: settingsMessage.id, ok: true } }));
+    await settings;
+
+    const refused = host.refreshUsage();
+    const refusedMessage = frame.posted.at(-1);
+    if (refusedMessage?.type !== 'usage-refresh') throw new Error('Expected usage refresh');
+    frame.dispatch(new MessageEvent('message', { data: { channel: OPENCHAMBER_SDK_CHANNEL, v: 1, type: 'result', id: refusedMessage.id, ok: false, code: 'NOT_GRANTED', error: 'Not granted' } }));
+    await expect(refused).rejects.toMatchObject({ code: 'NOT_GRANTED' });
+    host.dispose();
+  });
 
   test('background action waits for the handler and its toast acknowledgement', async () => {
     const frame = createFrame();

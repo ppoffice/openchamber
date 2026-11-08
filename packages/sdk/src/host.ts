@@ -78,6 +78,7 @@ import {
   isStartSessionResult,
 } from './contract.ts';
 import { GUEST_SHELL_ID_MAX, GUEST_SHELL_OUTPUT_TAIL_MAX, type GuestRunningShellsSnapshot, type GuestShellOutputResult, type GuestShellStopResult, type GuestShellsScope } from './shells.ts';
+import { readGuestUsageSnapshot, type GuestUsageSnapshot } from './usage.ts';
 
 export type HostFrame = {
   addEventListener: Window['addEventListener'];
@@ -145,6 +146,19 @@ export type HostClient = {
   /** Receive activation of a host-rendered Work Status control. */
   onStatusControl: (listener: (event: GuestStatusControlEvent) => void) => () => void;
   onPopoverClosed: (listener: (event: GuestPopoverClosedEvent) => void) => () => void;
+  /**
+   * The provider usage feed (capability `usage`). Registering the first
+   * listener asks the host to start it once `ready.features.usage` is
+   * advertised; the last unsubscribe sends nothing and the feed stays on for
+   * this frame. A listener that registers later gets the last snapshot. The
+   * snapshot never carries account or plan names, console budgets, gift-reset
+   * ids or credentials.
+   */
+  onUsage: (listener: (snapshot: GuestUsageSnapshot) => void) => () => void;
+  /** Ask the host to refetch usage now; resolves when the refetch settled. `UNSUPPORTED` without `ready.features.usage`, `NOT_GRANTED` without the `usage` grant. */
+  refreshUsage: () => Promise<void>;
+  /** Ask the host to open Settings → Usage. Same refusals as `refreshUsage`. */
+  openUsageSettings: () => Promise<void>;
   /** Replace this status frame's host-rendered controls. Pass [] to clear them. */
   setStatusControls: (controls: GuestStatusControl[]) => Promise<void>;
   openPopover: (request: GuestPopoverRequest) => Promise<void>;
@@ -331,6 +345,9 @@ export const connectHost = (options: HostClientOptions = {}): HostClient => {
   const serviceEventListeners = new Set<(event: { topic: string; data: JsonValue }) => void>();
   const statusControlListeners = new Set<(event: GuestStatusControlEvent) => void>();
   const popoverClosedListeners = new Set<(event: GuestPopoverClosedEvent) => void>();
+  const usageListeners = new Set<(snapshot: GuestUsageSnapshot) => void>();
+  let lastUsage: GuestUsageSnapshot | null = null;
+  let usageSubscribed = false;
   const lateGenerateListeners = new Set<(result: LateGenerateResult) => void>();
   // Answers the host handed over after the last listener left; each one comes
   // from a `generate` this extension made.
@@ -416,6 +433,7 @@ export const connectHost = (options: HostClientOptions = {}): HostClient => {
       emit(itemListeners, message.payload.item);
       if (message.payload.block) emit(blockListeners, message.payload.block);
       listenForLateGenerate();
+      subscribeUsage();
       return;
     }
 
@@ -489,6 +507,14 @@ export const connectHost = (options: HostClientOptions = {}): HostClient => {
 
     if (message.type === 'popover-closed') {
       emit(popoverClosedListeners, message.payload);
+      return;
+    }
+
+    if (message.type === 'usage') {
+      const snapshot = readGuestUsageSnapshot(message.payload.snapshot);
+      if (!snapshot) return;
+      lastUsage = snapshot;
+      emit(usageListeners, snapshot);
       return;
     }
 
@@ -626,6 +652,19 @@ export const connectHost = (options: HostClientOptions = {}): HostClient => {
   );
 
   const envelope: Pick<GuestMessage, 'channel' | 'v'> = { channel: OPENCHAMBER_SDK_CHANNEL, v: OPENCHAMBER_SDK_API_VERSION };
+  // Start the feed once per frame's lifetime, when the host advertises it and
+  // someone listens. A refusal (NOT_GRANTED) leaves listeners quiet; the host
+  // keeps deciding on every later call.
+  const subscribeUsage = (): void => {
+    if (usageSubscribed || usageListeners.size === 0 || lastReady?.features?.usage !== true) return;
+    usageSubscribed = true;
+    void request({ ...envelope, type: 'usage-subscribe', id: nextId(ids) }).catch(() => undefined);
+  };
+  const requireUsageFeed = (): Promise<void> | null => (
+    lastReady?.features?.usage !== true
+      ? Promise.reject(new HostRequestError('UNSUPPORTED', 'This host does not support the usage feed.'))
+      : null
+  );
   // Fire-and-forget notices: nothing to wait for, and nothing to post to
   // without a host frame.
   const notify = (message: Extract<GuestMessage, { type: 'file-change' | 'file-save' | 'file-unsupported' }>): void => {
@@ -902,6 +941,16 @@ export const connectHost = (options: HostClientOptions = {}): HostClient => {
       popoverClosedListeners.add(listener);
       return () => { popoverClosedListeners.delete(listener); };
     },
+    onUsage: (listener) => {
+      usageListeners.add(listener);
+      if (lastUsage) listener(lastUsage);
+      subscribeUsage();
+      return () => {
+        usageListeners.delete(listener);
+      };
+    },
+    refreshUsage: () => requireUsageFeed() ?? request({ ...envelope, type: 'usage-refresh', id: nextId(ids) }),
+    openUsageSettings: () => requireUsageFeed() ?? request({ ...envelope, type: 'open-usage-settings', id: nextId(ids) }),
     setStatusControls: (controls) => {
       if (lastReady?.features?.statusControls !== true) {
         return Promise.reject(new HostRequestError('UNSUPPORTED', 'This host does not support status controls.'));

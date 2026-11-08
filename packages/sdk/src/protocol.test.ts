@@ -14,6 +14,7 @@ import {
   readHostMessage,
 } from './contract.ts';
 import { GUEST_POPOVER_DATA_MAX, isGuestPopoverRequest } from './popover.ts';
+import { GUEST_USAGE_ICON_MAX, readGuestUsageSnapshot, type GuestUsageModel, type GuestUsageProvider, type GuestUsageSnapshot, type GuestUsageWindow } from './usage.ts';
 import {
   guestMessageSchema,
   hostMessageSchema,
@@ -970,5 +971,74 @@ describe('actions, commands, and badge wire shapes', () => {
       .toMatchObject({ type: 'result', ok: true, payload: { output: 'tick', cursor: 14, skipped: false } });
     expect(parseHostMessage({ ...envelope, type: 'result', id: 'c2', ok: true, payload: { stopped: true } }))
       .toMatchObject({ type: 'result', ok: true, payload: { stopped: true } });
+  });
+});
+
+describe('usage feed wire shape', () => {
+  const envelope = { channel: OPENCHAMBER_SDK_CHANNEL, v: OPENCHAMBER_SDK_API_VERSION };
+  const usageWindow: GuestUsageWindow = {
+    key: 'session',
+    label: 'Session',
+    usedPercent: 42,
+    remainingPercent: 58,
+    resetAt: 1_700_000_000_000,
+    resetLabel: 'in 3 h',
+    valueLabel: '$2.10 of $10',
+    tone: 'default',
+  };
+  const usageModel: GuestUsageModel = { key: 'gpt-5', name: 'GPT-5', windows: [usageWindow] };
+  const usageProvider: GuestUsageProvider = {
+    id: 'codex',
+    name: 'Codex',
+    icon: 'data:image/svg+xml;base64,PHN2Zy8+',
+    ok: true,
+    configured: true,
+    status: null,
+    shown: true,
+    windows: [usageWindow],
+    models: [usageModel],
+  };
+  const snapshot: GuestUsageSnapshot = { displayMode: 'usage', updatedAt: 1_700_000_000_000, loading: false, providers: [usageProvider] };
+
+  test('accepts a usage push, its three requests, and the ready feature flag', () => {
+    expect(parseHostMessage({ ...envelope, type: 'usage', payload: { snapshot } })).toMatchObject({ type: 'usage', payload: { snapshot } });
+    expect(readHostMessage({ ...envelope, type: 'usage', payload: { snapshot } })).toMatchObject({ type: 'usage' });
+    expect(readGuestUsageSnapshot(snapshot)).toEqual(snapshot);
+    for (const type of ['usage-subscribe', 'usage-refresh', 'open-usage-settings'] as const) {
+      expect(parseGuestMessage({ ...envelope, type, id: 'u-1' })?.type).toBe(type);
+    }
+    expect(parseHostMessage({ ...envelope, type: 'ready', payload: { ...readyPayload, features: { usage: true } } }))
+      .toMatchObject({ payload: { features: { usage: true } } });
+  });
+
+  test('drops snapshots over a bound or with an unknown displayed value', () => {
+    expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, providers: Array.from({ length: 65 }, () => usageProvider) } } }).success).toBe(false);
+    expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, providers: [{ ...usageProvider, windows: Array.from({ length: 33 }, () => usageWindow) }] } } }).success).toBe(false);
+    expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, providers: [{ ...usageProvider, models: Array.from({ length: 65 }, () => usageModel) }] } } }).success).toBe(false);
+    expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, providers: [{ ...usageProvider, name: 'x'.repeat(121) }] } } }).success).toBe(false);
+    expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, providers: [{ ...usageProvider, status: 'x'.repeat(501) }] } } }).success).toBe(false);
+    expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, providers: [{ ...usageProvider, icon: 'data:text/plain,hello' }] } } }).success).toBe(false);
+    expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, providers: [{ ...usageProvider, icon: `data:image/png;base64,${'A'.repeat(GUEST_USAGE_ICON_MAX)}` }] } } }).success).toBe(false);
+    expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, providers: [{ ...usageProvider, windows: [{ ...usageWindow, tone: 'success' }] }] } } }).success).toBe(false);
+    expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, providers: [{ ...usageProvider, windows: [{ ...usageWindow, usedPercent: 101 }] }] } } }).success).toBe(false);
+    expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, providers: [{ ...usageProvider, windows: [{ ...usageWindow, resetAt: 1.5 }] }] } } }).success).toBe(false);
+    expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, providers: [{ ...usageProvider, windows: [{ ...usageWindow, key: '' }] }] } } }).success).toBe(false);
+    expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, displayMode: 'percent' } } }).success).toBe(false);
+    expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, updatedAt: -1 } } }).success).toBe(false);
+    expect(readGuestUsageSnapshot({ ...snapshot, providers: Array.from({ length: 65 }, () => usageProvider) })).toBeNull();
+    expect(readGuestUsageSnapshot({ ...snapshot, displayMode: 'percent' })).toBeNull();
+  });
+
+  test('accepts the two icon data URL forms and drops the rest', () => {
+    const provider = (icon: string) => hostMessageSchema.safeParse({
+      ...envelope,
+      type: 'usage',
+      payload: { snapshot: { ...snapshot, providers: [{ ...usageProvider, icon }] } },
+    }).success;
+    expect(provider('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>')).toBe(true);
+    expect(provider('data:image/svg+xml;charset=utf-8,<svg/>')).toBe(true);
+    expect(provider('data:image/png;base64,iVBORw0KGgo=')).toBe(true);
+    expect(provider('https://example.com/icon.svg')).toBe(false);
+    expect(provider('data:image/gif;base64,R0lGODlh')).toBe(false);
   });
 });
