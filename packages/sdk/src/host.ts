@@ -1210,10 +1210,10 @@ export const connectHost = (options: HostClientOptions = {}): HostClient => {
       if (lastReady?.features?.headerWidth !== true) {
         return Promise.reject(new HostRequestError('UNSUPPORTED', 'This host does not size header frames.'));
       }
-      const payload = { preferred: clampHeaderItemWidth(preferred), min: clampHeaderItemWidth(min) };
-      if (!Number.isFinite(preferred) || !Number.isFinite(min) || payload.min > payload.preferred) {
+      if (!Number.isFinite(preferred) || !Number.isFinite(min) || min > preferred) {
         return Promise.reject(new HostRequestError('HOST_REJECTED', 'Width needs numbers with min at most preferred.'));
       }
+      const payload = { preferred: clampHeaderItemWidth(preferred), min: clampHeaderItemWidth(min) };
       return request({ ...envelope, type: 'width', id: nextId(ids), payload });
     },
     onFileOpen: (listener) => {
