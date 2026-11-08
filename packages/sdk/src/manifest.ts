@@ -926,13 +926,14 @@ export const serviceProvides = (
  * become the extension's, and a click hands the one clicked to it. `wake`
  * follows from `contributes.waits`: the service's text reaches an agent's
  * session when a wait it started fires. `marks` follows from
- * `contributes.marks`: the service puts icons on sidebar rows.
+ * `contributes.marks`: the service puts icons on sidebar rows. `usage`
+ * lets the frame read the provider usage feed and open Usage settings.
  */
-export const GUEST_CAPABILITIES = ['prompt', 'sessions', 'files', 'model', 'shells', 'microphone', 'conversation', 'service', 'network', 'filesystem', 'origins', 'transcript', 'sessionControl', 'sessionAnswers', 'instructions', 'skills', 'opencodePlugin', 'opencode', 'links', 'wake', 'marks'] as const;
+export const GUEST_CAPABILITIES = ['prompt', 'sessions', 'files', 'model', 'shells', 'microphone', 'conversation', 'service', 'network', 'filesystem', 'origins', 'transcript', 'sessionControl', 'sessionAnswers', 'instructions', 'skills', 'opencodePlugin', 'opencode', 'links', 'wake', 'marks', 'usage'] as const;
 
 export type GuestCapability = (typeof GUEST_CAPABILITIES)[number];
 
-export const DECLARED_GUEST_CAPABILITIES = ['prompt', 'sessions', 'files', 'model', 'shells', 'microphone'] as const;
+export const DECLARED_GUEST_CAPABILITIES = ['prompt', 'sessions', 'files', 'model', 'shells', 'microphone', 'usage'] as const;
 
 /** The capabilities a manifest may ask for directly. */
 export type DeclaredGuestCapability = (typeof DECLARED_GUEST_CAPABILITIES)[number];

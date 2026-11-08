@@ -57,6 +57,27 @@ export type {
 } from './status-view.ts';
 export type { OpenChamberManifestApiVersion } from './api-version.ts';
 export {
+  GUEST_USAGE_DISPLAY_MODES,
+  GUEST_USAGE_ICON_MAX,
+  GUEST_USAGE_ID_MAX,
+  GUEST_USAGE_LABEL_MAX,
+  GUEST_USAGE_MODELS_MAX,
+  GUEST_USAGE_PROVIDERS_MAX,
+  GUEST_USAGE_STATUS_MAX,
+  GUEST_USAGE_TONES,
+  GUEST_USAGE_WINDOWS_MAX,
+  isGuestUsageIcon,
+  readGuestUsageSnapshot,
+} from './usage.ts';
+export type {
+  GuestUsageDisplayMode,
+  GuestUsageModel,
+  GuestUsageProvider,
+  GuestUsageSnapshot,
+  GuestUsageTone,
+  GuestUsageWindow,
+} from './usage.ts';
+export {
   compareOpenChamberVersions,
   hostMeetsOpenChamberEngine,
   openChamberEngineMinimum,
@@ -449,6 +470,9 @@ export type {
   GuestBadgeMessage,
   GuestResizeMessage,
   GuestOpenCommitMessage,
+  GuestUsageRefreshMessage,
+  GuestUsageSubscribeMessage,
+  GuestOpenUsageSettingsMessage,
   GuestStatusControlsMessage,
   GuestPopoverAnchorMessage,
   GuestPopoverCloseMessage,
@@ -551,6 +575,7 @@ export type {
   HostShellsMessage,
   HostMicrophoneAudioMessage,
   HostMicrophoneEndedMessage,
+  HostUsageMessage,
   HostTheme,
   HostThemeMode,
   HostThemeTokens,
