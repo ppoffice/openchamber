@@ -28,6 +28,8 @@ Public author pages live in `packages/docs/content/docs/sdk.mdx`, `sdk/host.mdx`
 
 ## Invariants
 
+- `contributes.headerItem` is `{ entry }`, a package-local `.html` frame under the status section's frame-only rules. The server validates its HTML/scripts, exposes `headerEntry`, and includes it in `hasGuestFrame`. Its `ready.surface` is `header`, height is `GUEST_HEADER_ITEM_HEIGHT` (28 px), and `host.setWidth({ preferred, min })` requires `ready.features.headerWidth`. Widths round up and clamp to 24..480; non-numbers or `min > preferred` are `HOST_REJECTED`. The guest reads its actual width from `window.innerWidth`. VS Code and mobile mount no header item.
+
 Notification services can receive kind `pull-request` for a GitHub merge the user requested here. It carries no session identity. The fixed event title and repository reference use the ordinary notification text fields; enterprise mode strips the reference at the host boundary. Services that validate notification kinds with an older SDK must update that parser to accept this additive kind.
 
 - `scripts/bump-version.mjs` refreshes `bun.lock` after bumping package versions; include both in the release commit. Bun resolves `workspace:*` in published archives from lockfile versions, and a frozen install can succeed with stale versions. `scripts/bump-version.test.mjs` covers the bump, frozen install, and packed dependency versions together.

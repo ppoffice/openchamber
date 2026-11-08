@@ -144,6 +144,8 @@ Record and metadata reads can finish in a different order. Each announcement res
 
 ## Package changes
 
+`contributes.headerItem.entry` is validated as package HTML with built scripts, exposed as `headerEntry` on the catalog row, and included in `hasGuestFrame` for asset serving and storage. Folder installs watch the header entry alongside the other frame entries.
+
 New files under a known id reach running clients without a reload. An install or replace (JSON or upload), a Git update, and an edit to a folder install go through `packageChanged` in `routes.js`: `noteGuestPackageChanged` raises the package's `revision` and drops the catalog cache, the service stops and starts again from the new files on its next request, and the activation listeners and `onGuestsChanged` run. Clients reload frames whose `revision` moved, except a file editor's, which would drop unsaved edits and loads the new files on its next open.
 
 `package-watch.js` reports edits to folder installs, the only packages whose files change under a running host; copies change only through install and update. The runtime turns it on with `watchFolderInstalls`; tests that write into packages leave it off.

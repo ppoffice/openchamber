@@ -58,6 +58,7 @@ import {
   type SessionSnapshot,
   type StartSessionResult,
   type ToastRequest,
+  type WidthRequest,
   type ServiceStatusResult,
   type FileListResult,
   type FileReadResult,
@@ -85,6 +86,7 @@ import {
   type GuestMicrophone,
   type GuestMicrophoneEndReason,
 } from './microphone.ts';
+import { clampHeaderItemWidth } from './manifest.ts';
 import { GUEST_SHELL_ID_MAX, GUEST_SHELL_OUTPUT_TAIL_MAX, type GuestRunningShellsSnapshot, type GuestShellOutputResult, type GuestShellStopResult, type GuestShellsScope } from './shells.ts';
 
 export type HostFrame = {
@@ -257,6 +259,15 @@ export type HostClient = {
    * chrome and ignore it.
    */
   setHeight: (height: number) => Promise<void>;
+  /**
+   * The width a `header` frame would like, in CSS px. Both values are rounded
+   * up and clamped to `GUEST_HEADER_ITEM_WIDTH_MIN`..`GUEST_HEADER_ITEM_WIDTH_MAX`.
+   * The host may give the frame less than `preferred`, never less than `min`;
+   * the frame reads what it got from `window.innerWidth`. A host without
+   * `ready.features.headerWidth` is `UNSUPPORTED`; a non-number or `min` above
+   * `preferred` is `HOST_REJECTED`.
+   */
+  setWidth: (request: WidthRequest) => Promise<void>;
   /**
    * The file a `file` surface edits (`contributes.fileEditors`). Replays the
    * last file; called again when the host reconnects the frame. Registering
@@ -1308,6 +1319,16 @@ export const connectHost = (options: HostClientOptions = {}): HostClient => {
       id: nextId(ids),
       payload: { height: clampFrameHeight(height) },
     }),
+    setWidth: ({ preferred, min }) => {
+      if (lastReady?.features?.headerWidth !== true) {
+        return Promise.reject(new HostRequestError('UNSUPPORTED', 'This host does not size header frames.'));
+      }
+      const payload = { preferred: clampHeaderItemWidth(preferred), min: clampHeaderItemWidth(min) };
+      if (!Number.isFinite(preferred) || !Number.isFinite(min) || payload.min > payload.preferred) {
+        return Promise.reject(new HostRequestError('HOST_REJECTED', 'Width needs numbers with min at most preferred.'));
+      }
+      return request({ ...envelope, type: 'width', id: nextId(ids), payload });
+    },
     onFileOpen: (listener) => {
       fileOpenListeners.add(listener);
       if (!saveShortcutInstalled) {
