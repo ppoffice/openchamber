@@ -87,7 +87,7 @@ You can also add a local `.zip` or an https link to a git repository or a zip fi
 - `{ "mode": "dialog", "entry": "panel/attach.html" }` opens a separate page of yours in the window, so the picker does not have to share code with the rail panel
 - omit it and the extension stays off that menu
 
-Your page can tell where it is from `ctx.surface`: `panel`, `dialog`, `page`, `status`, or `block`. When the user clicks an attached item, its `data` comes back in `ctx.item`. Opening from the rail, + menu, or full-screen page menu starts without an item.
+Your page can tell where it is from `ctx.surface`: `panel`, `dialog`, `page`, `status`, `header`, or `block`. When the user clicks an attached item, its `data` comes back in `ctx.item`. Opening from the rail, + menu, or full-screen page menu starts without an item.
 
 `contributes.page: true` makes your panel available full-screen from the Extension pages menu above the session list. Use `{ "entry": "panel/page.html", "title": "Board" }` for separate HTML and an optional title. Ship that HTML and its built scripts. A page requires `panel.entry`, uses the same sandbox and permissions, and opens only when the user selects it. Reload, pause, removal, or a server switch closes it.
 
@@ -108,6 +108,7 @@ Drawing a panel and reading the current session need no permission. Anything tha
 | `files` | read and write files inside the open project (`readFile`, `writeFile`, `listDir`, `stat` with a relative path) |
 | `model` | one-off text generation with the user's Small Model (`generate`), outside any session |
 | `shells` | watch the shell commands your agents run in the background, read their output, and stop them (`onRunningShells`, `readShellOutput`, `stopShell`) |
+| `usage` | read provider usage (`onUsage`, `refreshUsage`, `openUsageSettings`) |
 
 Eleven more are added for you: `network` when you declare an `integration`, `service` when you declare a `service`, `filesystem` when you declare `filesystem` patterns, `origins` when you declare `origins`, `conversation` when a session action asks for the messages (see [Actions, commands, and the badge](#actions-commands-and-the-badge)), `transcript` when `sessionEvents` or `sessionControl` asks for `content` (see [Session events](/sdk/host/#session-events)), `sessionControl` when your service acts on sessions (see [Calling OpenChamber](/sdk/host/#calling-openchamber-from-your-service)), `sessionAnswers` when it answers the agent's permission requests and forms for the user (`sessionControl: { answers: true }`), `instructions` when it adds to what agents read, `skills` when you declare `contributes.skills`, a package folder of skills that reach every agent while the extension is on, and `opencodePlugin` when you declare `contributes.opencodePlugin` (see [An OpenCode plugin in your package](#an-opencode-plugin-in-your-package)).
 
@@ -212,6 +213,22 @@ Writes are atomic: OpenChamber writes a temporary file and renames it, so a read
 - `height` is the starting height in pixels, from 24 to 320 (120 by default). Call [`host.setHeight()`](/sdk/host/) when your content changes size.
 
 Your page sees `ctx.surface` as `status`. OpenChamber loads it only while the Work Status panel is visible and your section is expanded, and unloads it when the user collapses the section, so keep nothing there you can't rebuild. A section-only extension can use capabilities, a service, an integration, and files, but not `page`, `attach`, `actions`, or `commands`. Web and desktop only. The `git-graph-status` example is a complete section.
+
+## A strip in the app header
+
+`contributes.headerItem` adds a page to the app header, left of the context ring. It is a frame of its own like a status section, so you don't need `panel.entry`.
+
+```json
+"headerItem": { "entry": "header/index.html" }
+```
+
+Your page sees `ctx.surface` as `header` and 28 px of height. Ask for a width once `ready.features.headerWidth` is true:
+
+```ts
+await host.setWidth({ preferred: 160, min: 64 });
+```
+
+Both values are rounded up and held between 24 and 480 px. The host may give you less than `preferred` and treats `min` as a floor only up to 160 px, so the session tabs keep their width first: the strip shrinks, then the tabs scroll. `window.innerWidth` tells you what you got. A header item shows in web and desktop, never on full-page surfaces, in VS Code, or on mobile. With `ready.features.popovers`, a header frame opens its card below the strip when the request names no side.
 
 ## An editor for your file type
 
