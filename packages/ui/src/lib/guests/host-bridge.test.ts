@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { HostRequestError, OPENCHAMBER_SDK_CHANNEL, type GuestMessage, type GuestStatusControl, type ResolveResultPayload, type StartSessionRequest, type ToastRequest, type WidthRequest } from '@openchamber/sdk';
+import { HostRequestError, OPENCHAMBER_SDK_CHANNEL, type GuestMessage, type GuestStatusControl, type GuestUsageSnapshot, type ResolveResultPayload, type StartSessionRequest, type ToastRequest, type WidthRequest } from '@openchamber/sdk';
 import type { GuestFileProxyResult, GuestFileRequest } from './files.ts';
 import type { GuestGenerateProxyResult } from './generate.ts';
 
@@ -57,6 +57,15 @@ const effects = (overrides: Partial<BridgeEffects> = {}): BridgeEffects => ({
   openPopover: overrides.openPopover ?? (() => {}),
   closePopover: overrides.closePopover ?? (() => {}),
   setPopoverAnchorActive: overrides.setPopoverAnchorActive ?? (() => {}),
+  usageSubscribe: overrides.usageSubscribe ?? (() => ({
+    displayMode: 'usage' as const,
+    updatedAt: null,
+    loading: false,
+    providers: [],
+  })),
+  pushUsage: overrides.pushUsage ?? (() => {}),
+  usageRefresh: overrides.usageRefresh ?? (async () => {}),
+  openUsageSettings: overrides.openUsageSettings ?? (() => {}),
 });
 
 describe('answerGuestMessage', () => {
@@ -731,5 +740,93 @@ describe('badge and resolve-result', () => {
     }, effects({ resolveResult: (id, payload) => { seen.push([id, payload]); } }));
     expect(seen).toEqual([['resolve-1', { item: null }]]);
     expect(reply).toBeNull();
+  });
+
+  test('subscribes a frame to the usage feed and publishes the snapshot it answered', async () => {
+    const snapshot: GuestUsageSnapshot = {
+      displayMode: 'usage',
+      updatedAt: 1_700_000_000_000,
+      loading: false,
+      providers: [{
+        id: 'claude',
+        name: 'Claude',
+        icon: null,
+        ok: true,
+        configured: true,
+        status: null,
+        shown: true,
+        windows: [{
+          key: 'window-5h',
+          label: '5-Hour',
+          usedPercent: 40,
+          remainingPercent: 60,
+          resetAt: 1_700_000_100_000,
+          resetLabel: '18:00',
+          valueLabel: '40%',
+          tone: 'default',
+        }],
+        models: [],
+      }],
+    };
+    const published: GuestUsageSnapshot[] = [];
+    const reply = await answerGuestMessage({
+      channel: OPENCHAMBER_SDK_CHANNEL,
+      v: 1,
+      type: 'usage-subscribe',
+      id: 'usage-1',
+    }, effects({ usageSubscribe: () => snapshot, pushUsage: (next) => { published.push(next); } }));
+    expect(published).toEqual([snapshot]);
+    expect(reply).toMatchObject({ type: 'result', id: 'usage-1', ok: true });
+  });
+
+  test('refuses usage without the grant and where the host serves no feed', async () => {
+    const publish = () => { throw new Error('nothing may be published'); };
+    const refused = await answerGuestMessage({
+      channel: OPENCHAMBER_SDK_CHANNEL,
+      v: 1,
+      type: 'usage-subscribe',
+      id: 'usage-no-grant',
+    }, effects({
+      usageSubscribe: () => { throw new HostRequestError('NOT_GRANTED', 'Not allowed'); },
+      pushUsage: publish,
+    }));
+    expect(refused).toMatchObject({ type: 'result', ok: false, code: 'NOT_GRANTED' });
+
+    const unsupported = await answerGuestMessage({
+      channel: OPENCHAMBER_SDK_CHANNEL,
+      v: 1,
+      type: 'usage-subscribe',
+      id: 'usage-unsupported',
+    }, effects({
+      usageSubscribe: () => { throw new HostRequestError('UNSUPPORTED', 'No feed here'); },
+      pushUsage: publish,
+    }));
+    expect(unsupported).toMatchObject({ type: 'result', ok: false, code: 'UNSUPPORTED' });
+  });
+
+  test('refreshes usage and opens the settings page', async () => {
+    const calls: string[] = [];
+    let settle: () => void = () => {};
+    const refresh = answerGuestMessage({
+      channel: OPENCHAMBER_SDK_CHANNEL,
+      v: 1,
+      type: 'usage-refresh',
+      id: 'usage-refresh-1',
+    }, effects({
+      usageRefresh: () => new Promise<void>((resolve) => { calls.push('refresh:start'); settle = resolve; }),
+    }));
+    await Promise.resolve();
+    expect(calls).toEqual(['refresh:start']);
+    settle();
+    expect(await refresh).toMatchObject({ type: 'result', id: 'usage-refresh-1', ok: true });
+
+    const open = await answerGuestMessage({
+      channel: OPENCHAMBER_SDK_CHANNEL,
+      v: 1,
+      type: 'open-usage-settings',
+      id: 'usage-settings-1',
+    }, effects({ openUsageSettings: () => { calls.push('settings'); } }));
+    expect(calls).toEqual(['refresh:start', 'settings']);
+    expect(open).toMatchObject({ type: 'result', id: 'usage-settings-1', ok: true });
   });
 });
