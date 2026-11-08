@@ -53,6 +53,8 @@ export type InstalledGuest = {
   statusDefaultExpanded?: boolean;
   /** Whether this status section needs the Work Status directory. */
   statusRequiresProject?: boolean;
+  /** HTML of the extension's header strip (`contributes.headerItem`); may exist without `entry`. */
+  headerEntry?: string;
   integration?: PublicIntegration;
   /** Declared `contributes.filesystem` patterns, shown on the approval dialog. */
   filesystem?: string[];

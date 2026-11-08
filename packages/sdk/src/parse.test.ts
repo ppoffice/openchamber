@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import { OPENCHAMBER_SDK_API_VERSION } from './api-version.ts';
-import { clampStatusSectionHeight, hasGuestPage, requestedGuestCapabilities, toPublicNotifications, toPublicQuota, toPublicSessionEvents, toPublicSourceControl, resolveAttachEntry, resolveStatusSectionEntry, resolveStatusSectionSource, resolveAttachMode, resolveIntegrationApi, toPublicIntegration, type OpenChamberContributes, isOpenCodeProviderId, isTrackerUrlTemplate, toPublicTracker } from './manifest.ts';
+import { clampHeaderItemWidth, clampStatusSectionHeight, GUEST_HEADER_ITEM_WIDTH_MAX, GUEST_HEADER_ITEM_WIDTH_MIN, hasGuestPage, requestedGuestCapabilities, toPublicNotifications, toPublicQuota, toPublicSessionEvents, toPublicSourceControl, resolveAttachEntry, resolveStatusSectionEntry, resolveStatusSectionSource, resolveAttachMode, resolveIntegrationApi, toPublicIntegration, type OpenChamberContributes, isOpenCodeProviderId, isTrackerUrlTemplate, toPublicTracker } from './manifest.ts';
 import type { JsonValue } from './contract.ts';
 import { parseManifest, parseManifestJson } from './parse.ts';
 
@@ -1191,6 +1191,54 @@ describe('contributes.statusSection', () => {
     expect(clampStatusSectionHeight(200.4)).toBe(200);
     expect(clampStatusSectionHeight(5000)).toBe(320);
     expect(clampStatusSectionHeight(Number.NaN)).toBe(120);
+  });
+});
+
+describe('contributes.headerItem', () => {
+  const panel = { id: 'usage-strip', name: 'Usage strip', icon: 'dashboard' };
+  const headerItem = { entry: 'header/index.html' };
+  const parse = (contributes: OpenChamberContributes) => parseManifestJson(JSON.stringify({ apiVersion: 1, contributes }));
+
+  test('a header item alone is enough: no panel page, no rail icon', () => {
+    const result = parse({ panel, headerItem });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.message);
+    expect(hasGuestPage(result.manifest.contributes)).toBe(false);
+    expect(result.manifest.contributes.headerItem).toEqual(headerItem);
+  });
+
+  test('the header frame may use a service and granted capabilities', () => {
+    const result = parse({ panel, headerItem, service: { entry: 'service/main.js', runtime: 'host' }, capabilities: ['files'] });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.message);
+    expect(requestedGuestCapabilities(result.manifest.contributes)).toEqual(['files', 'service']);
+  });
+
+  test('a header-only package cannot declare things that open or invoke another frame', () => {
+    const extras: Array<Partial<OpenChamberContributes>> = [
+      { page: { entry: 'page.html' } }, { attach: 'dialog' }, { commands: [{ name: 'usage' }] },
+      { actions: [{ id: 'inspect', label: 'Inspect', where: 'message', mode: 'background' }] },
+    ];
+    for (const extra of extras) {
+      expect(parse({ panel, headerItem, ...extra })).toMatchObject({ ok: false, code: 'invalid-panel' });
+    }
+    expect(parse({ panel, headerItem, background: { entry: 'background/index.html' }, commands: [{ name: 'usage' }] }))
+      .toMatchObject({ ok: true });
+  });
+
+  test('refuses entries outside the package and non-HTML entries', () => {
+    for (const declared of [true, {}, { entry: '' }, { entry: '../header.html' }, { entry: 'header/main.js' },
+      { entry: 'https://example.com/a.html' }, { entry: '/header/index.html' }]) {
+      expect(parseManifestJson(JSON.stringify({ apiVersion: 1, contributes: { panel, headerItem: declared } })))
+        .toMatchObject({ ok: false, code: 'invalid-header-item' });
+    }
+  });
+
+  test('clamps widths to the header range', () => {
+    expect(clampHeaderItemWidth(5)).toBe(GUEST_HEADER_ITEM_WIDTH_MIN);
+    expect(clampHeaderItemWidth(120.2)).toBe(121);
+    expect(clampHeaderItemWidth(5000)).toBe(GUEST_HEADER_ITEM_WIDTH_MAX);
+    expect(clampHeaderItemWidth(Number.NaN)).toBe(GUEST_HEADER_ITEM_WIDTH_MIN);
   });
 });
 

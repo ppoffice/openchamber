@@ -153,6 +153,18 @@ describe('parseHostMessage', () => {
     expect(message.payload.features).toEqual({ statusControls: true });
   });
 
+  test('reads the header surface and its width feature', () => {
+    const message = parseHostMessage({
+      channel: OPENCHAMBER_SDK_CHANNEL,
+      v: OPENCHAMBER_SDK_API_VERSION,
+      type: 'ready',
+      payload: { ...readyPayload, surface: 'header', features: { headerWidth: true } },
+    });
+    if (message?.type !== 'ready') throw new Error('Expected ready snapshot');
+    expect(message.payload.surface).toBe('header');
+    expect(message.payload.features).toEqual({ headerWidth: true });
+  });
+
   test('accepts a null directory', () => {
     const message = parseHostMessage({
       channel: OPENCHAMBER_SDK_CHANNEL,
@@ -931,6 +943,18 @@ describe('actions, commands, and badge wire shapes', () => {
     expect(parseGuestMessage({ ...envelope, type: 'resize', id: 'h-1', payload: { height: -1 } })).toBeNull();
     expect(parseGuestMessage({ ...envelope, type: 'resize', id: 'h-1', payload: { height: 10_001 } })).toBeNull();
     expect(parseGuestMessage({ ...envelope, type: 'resize', id: 'h-1', payload: { height: 1.5 } })).toBeNull();
+  });
+
+  test('accepts header widths in range with min at most preferred and drops the rest', () => {
+    expect(parseGuestMessage({ ...envelope, type: 'width', id: 'w-1', payload: { preferred: 200, min: 60 } }))
+      .toMatchObject({ type: 'width', payload: { preferred: 200, min: 60 } });
+    expect(parseGuestMessage({ ...envelope, type: 'width', id: 'w-1', payload: { preferred: 24, min: 24 } })).not.toBeNull();
+    for (const payload of [
+      { preferred: 100, min: 120 }, { preferred: 481, min: 60 }, { preferred: 200, min: 23 },
+      { preferred: 200.5, min: 60 }, { preferred: 200 }, { min: 60 },
+    ]) {
+      expect(parseGuestMessage({ ...envelope, type: 'width', id: 'w-1', payload })).toBeNull();
+    }
   });
 
   test('accepts badge counts in range and drops the rest', () => {

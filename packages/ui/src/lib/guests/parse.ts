@@ -202,6 +202,7 @@ const installedGuestSchema = z.object({
   statusHeight: z.number().int().min(GUEST_STATUS_SECTION_HEIGHT_MIN).max(GUEST_STATUS_SECTION_HEIGHT_MAX).optional(),
   statusDefaultExpanded: z.boolean().optional(),
   statusRequiresProject: z.boolean().optional(),
+  headerEntry: z.string().trim().min(1).optional(),
   integration: publicIntegrationSchema.optional(),
   filesystem: z.array(z.string().trim().min(1)).optional(),
   origins: z.array(z.string().trim().min(1)).optional(),

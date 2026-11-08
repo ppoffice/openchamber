@@ -284,6 +284,17 @@ export const inspectGuestPackage = async (packageRoot, { openchamberVersion, ski
     if (section !== true && section?.defaultExpanded !== undefined) guest.statusDefaultExpanded = section.defaultExpanded;
     if (section !== true && section?.requiresProject !== undefined) guest.statusRequiresProject = section.requiresProject;
   }
+  // The header strip is a frame of its own as well, checked the same way.
+  const headerEntry = parsed.manifest.contributes.headerItem?.entry;
+  if (headerEntry) {
+    if (!await resolveGuestAssetPath(packageRoot, headerEntry)) {
+      return { ok: false, code: 'invalid-manifest' };
+    }
+    if (!await guestBuiltScriptsReady(packageRoot, headerEntry)) {
+      return { ok: false, code: 'missing-build' };
+    }
+    guest.headerEntry = headerEntry;
+  }
   // File editors are frames of their own too; each entry is checked the same way.
   const fileEditors = parsed.manifest.contributes.fileEditors ?? [];
   for (const editor of fileEditors) {
@@ -395,9 +406,9 @@ const withSource = (guest, source, displayPath) => ({
   path: displayPath,
 });
 
-/** Whether the package has any page the host loads: panel, background, status section, or file editor. */
+/** Whether the package has any page the host loads: panel, background, status section, header item, file editor, or block. */
 export const hasGuestFrame = (guest) => Boolean(
-  guest.entry || guest.backgroundEntry || guest.statusEntry
+  guest.entry || guest.backgroundEntry || guest.statusEntry || guest.headerEntry
     || (Array.isArray(guest.fileEditors) && guest.fileEditors.length > 0)
     || (Array.isArray(guest.blocks) && guest.blocks.length > 0),
 );
@@ -468,6 +479,7 @@ export const toPublicGuest = (guest) => {
   if (Number.isInteger(guest.statusHeight)) row.statusHeight = guest.statusHeight;
   if (guest.statusDefaultExpanded !== undefined) row.statusDefaultExpanded = guest.statusDefaultExpanded;
   if (guest.statusRequiresProject !== undefined) row.statusRequiresProject = guest.statusRequiresProject;
+  if (guest.headerEntry) row.headerEntry = guest.headerEntry;
   if (attach) {
     row.attach = attach;
   }

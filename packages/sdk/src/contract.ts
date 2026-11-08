@@ -72,9 +72,10 @@ export type SessionSnapshot = {
 
 /**
  * Which host chrome mounted this iframe. Not `openSurface`. `status` is the
- * extension's section in the chat's Work Status panel.
+ * extension's section in the chat's Work Status panel, `header` its strip in
+ * the app header.
  */
-export type GuestHostSurface = 'panel' | 'dialog' | 'page' | 'background' | 'status' | 'file' | 'popover' | 'block';
+export type GuestHostSurface = 'panel' | 'dialog' | 'page' | 'background' | 'status' | 'file' | 'popover' | 'block' | 'header';
 
 /**
  * The call a `block` surface draws: the component's name and its arguments as
@@ -253,6 +254,8 @@ export type HostReadyContext = {
     popovers?: true;
     /** The host keeps `generate` answers that arrive after their frame is gone (`onLateGenerateResult`). */
     lateGenerateResults?: true;
+    /** The host sizes a `header` frame from `setWidth`. */
+    headerWidth?: true;
   };
 };
 
@@ -377,6 +380,17 @@ export const isGuestCommitSha = (value: string): boolean => GUEST_COMMIT_SHA.tes
 /** The content height the guest would like, in CSS px. Only the `status` surface sizes its frame from it. */
 export type ResizeRequest = {
   height: number;
+};
+
+/**
+ * The width a `header` frame would like, in whole CSS px from
+ * `GUEST_HEADER_ITEM_WIDTH_MIN` to `GUEST_HEADER_ITEM_WIDTH_MAX`. The host may
+ * give it less than `preferred`, never less than `min`; `min` is at most
+ * `preferred`.
+ */
+export type WidthRequest = {
+  preferred: number;
+  min: number;
 };
 
 export type ToastKind = 'info' | 'success' | 'error';
@@ -748,6 +762,7 @@ export type GuestFileStatMessage = GuestCall<'file-stat', FileStatRequest>;
 export type GuestGenerateMessage = GuestCall<'generate', GenerateRequest>;
 export type GuestBadgeMessage = GuestCall<'badge', BadgeRequest>;
 export type GuestResizeMessage = GuestCall<'resize', ResizeRequest>;
+export type GuestWidthMessage = GuestCall<'width', WidthRequest>;
 export type GuestOpenCommitMessage = GuestCall<'open-commit', OpenCommitRequest>;
 export type GuestStatusControlsMessage = GuestCall<'status-controls', { controls: GuestStatusControl[] }>;
 export type GuestPopoverOpenMessage = GuestCall<'popover-open', GuestPopoverRequest>;
@@ -807,6 +822,7 @@ export type GuestMessage =
   | GuestGenerateMessage
   | GuestBadgeMessage
   | GuestResizeMessage
+  | GuestWidthMessage
   | GuestOpenCommitMessage
   | GuestStatusControlsMessage
   | GuestPopoverOpenMessage
