@@ -14,8 +14,10 @@ import {
   type GuestUsageSnapshot,
 } from './usage.ts';
 
-const idSchema = z.string().min(1).max(GUEST_USAGE_ID_MAX);
-const labelSchema = z.string().min(1).max(GUEST_USAGE_LABEL_MAX);
+const noNul = (value: string): boolean => !value.includes('\0');
+
+const idSchema = z.string().min(1).max(GUEST_USAGE_ID_MAX).refine(noNul);
+const labelSchema = z.string().min(1).max(GUEST_USAGE_LABEL_MAX).refine(noNul);
 const percentSchema = z.number().finite().min(0).max(100);
 const timestampSchema = z.number().int().nonnegative();
 
@@ -25,8 +27,8 @@ const windowSchema = z.object({
   usedPercent: percentSchema.nullable(),
   remainingPercent: percentSchema.nullable(),
   resetAt: timestampSchema.nullable(),
-  resetLabel: z.string().max(GUEST_USAGE_LABEL_MAX).nullable(),
-  valueLabel: z.string().max(GUEST_USAGE_LABEL_MAX).nullable(),
+  resetLabel: z.string().max(GUEST_USAGE_LABEL_MAX).refine(noNul).nullable(),
+  valueLabel: z.string().max(GUEST_USAGE_LABEL_MAX).refine(noNul).nullable(),
   tone: z.enum(GUEST_USAGE_TONES),
 }).strict();
 
@@ -42,7 +44,7 @@ const providerSchema = z.object({
   icon: z.string().max(GUEST_USAGE_ICON_MAX).refine(isGuestUsageIcon).nullable(),
   ok: z.boolean(),
   configured: z.boolean(),
-  status: z.string().max(GUEST_USAGE_STATUS_MAX).nullable(),
+  status: z.string().max(GUEST_USAGE_STATUS_MAX).refine(noNul).nullable(),
   shown: z.boolean(),
   windows: z.array(windowSchema).max(GUEST_USAGE_WINDOWS_MAX),
   models: z.array(modelSchema).max(GUEST_USAGE_MODELS_MAX),

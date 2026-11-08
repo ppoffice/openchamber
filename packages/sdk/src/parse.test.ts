@@ -234,6 +234,21 @@ describe('parseManifest', () => {
     }
   });
 
+  test('names the declared capabilities in the invalid-capabilities message', () => {
+    const result = parseManifestJson(JSON.stringify({
+      apiVersion: 1,
+      contributes: {
+        panel: validBlock.contributes.panel,
+        capabilities: ['nope'],
+      },
+    }));
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe('invalid-capabilities');
+      expect(result.message).toContain('"prompt", "sessions", "files", "model", "shells", or "usage"');
+    }
+  });
+
   test('rejects filesystem patterns that are relative, escape, or are empty', () => {
     const attempt = (filesystem: unknown) => parseManifest({
       apiVersion: 1,

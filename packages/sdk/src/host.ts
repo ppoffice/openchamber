@@ -421,6 +421,10 @@ export const connectHost = (options: HostClientOptions = {}): HostClient => {
 
     if (message.type === 'ready') {
       lastReady = message.payload;
+      // A new host instance serves a new feed: drop the previous snapshot and
+      // subscribe again below, the way `generate-late-listen` is repeated.
+      lastUsage = null;
+      usageSubscribed = false;
       lastLifecycle = lifecycleFromSession(message.payload.session);
       emit(readyListeners, message.payload);
       emit(directoryListeners, message.payload.directory);
@@ -652,9 +656,10 @@ export const connectHost = (options: HostClientOptions = {}): HostClient => {
   );
 
   const envelope: Pick<GuestMessage, 'channel' | 'v'> = { channel: OPENCHAMBER_SDK_CHANNEL, v: OPENCHAMBER_SDK_API_VERSION };
-  // Start the feed once per frame's lifetime, when the host advertises it and
-  // someone listens. A refusal (NOT_GRANTED) leaves listeners quiet; the host
-  // keeps deciding on every later call.
+  // Start the feed when the host advertises it and someone listens. `ready`
+  // resets the flag, so a re-attached host gets a fresh `usage-subscribe`;
+  // `usage-subscribe` is idempotent and the host answers with the current
+  // snapshot. A refusal (NOT_GRANTED) leaves listeners quiet.
   const subscribeUsage = (): void => {
     if (usageSubscribed || usageListeners.size === 0 || lastReady?.features?.usage !== true) return;
     usageSubscribed = true;

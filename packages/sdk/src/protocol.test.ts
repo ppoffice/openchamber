@@ -1023,6 +1023,11 @@ describe('usage feed wire shape', () => {
     expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, providers: [{ ...usageProvider, windows: [{ ...usageWindow, usedPercent: 101 }] }] } } }).success).toBe(false);
     expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, providers: [{ ...usageProvider, windows: [{ ...usageWindow, resetAt: 1.5 }] }] } } }).success).toBe(false);
     expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, providers: [{ ...usageProvider, windows: [{ ...usageWindow, key: '' }] }] } } }).success).toBe(false);
+    expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, providers: [{ ...usageProvider, id: 'codex\0' }] } } }).success).toBe(false);
+    expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, providers: [{ ...usageProvider, name: 'Codex\0' }] } } }).success).toBe(false);
+    expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, providers: [{ ...usageProvider, windows: [{ ...usageWindow, label: 'Session\0' }] }] } } }).success).toBe(false);
+    expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, providers: [{ ...usageProvider, windows: [{ ...usageWindow, resetLabel: 'in 3 h\0' }] }] } } }).success).toBe(false);
+    expect(readGuestUsageSnapshot({ ...snapshot, providers: [{ ...usageProvider, name: 'Codex\0' }] })).toBeNull();
     expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, displayMode: 'percent' } } }).success).toBe(false);
     expect(hostMessageSchema.safeParse({ ...envelope, type: 'usage', payload: { snapshot: { ...snapshot, updatedAt: -1 } } }).success).toBe(false);
     expect(readGuestUsageSnapshot({ ...snapshot, providers: Array.from({ length: 65 }, () => usageProvider) })).toBeNull();
