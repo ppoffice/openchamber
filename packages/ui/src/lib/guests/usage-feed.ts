@@ -73,7 +73,11 @@ const projectWindow = (
   const usedPercent = percent(window.usedPercent);
   const remainingPercent = percent(window.remainingPercent);
   const displayPercent = input.displayMode === 'remaining' ? remainingPercent : usedPercent;
-  const valueLabel = formatQuotaWindowValueLabel(window, displayPercent, input.translate);
+  // Only a string the host made from structured data crosses. A provider's or
+  // extension's own `valueLabel` is free text and can carry an account name.
+  const valueLabel = window.value !== undefined || window.creditsUsed !== undefined
+    ? formatQuotaWindowValueLabel(window, displayPercent, input.translate)
+    : null;
   const resetLabel = formatQuotaResetLabel(
     window.resetAt,
     window.resetAfterFormatted ?? window.resetAtFormatted,
@@ -86,7 +90,7 @@ const projectWindow = (
     remainingPercent,
     resetAt: typeof window.resetAt === 'number' && Number.isSafeInteger(window.resetAt) ? window.resetAt : null,
     resetLabel: resetLabel.length > 0 ? cut(resetLabel, GUEST_USAGE_LABEL_MAX) : null,
-    valueLabel: valueLabel === '-' ? null : cut(valueLabel, GUEST_USAGE_LABEL_MAX),
+    valueLabel: valueLabel === null || valueLabel === '-' ? null : cut(valueLabel, GUEST_USAGE_LABEL_MAX),
     tone: toneOf(window),
   };
 };
@@ -100,7 +104,11 @@ const projectProvider = (
   const windows: GuestUsageWindow[] = [];
   for (const [label, window] of Object.entries(result?.usage?.windows ?? {})) {
     if (windows.length >= GUEST_USAGE_WINDOWS_MAX) break;
-    windows.push(projectWindow(`window-${label}`, formatWindowLabel(label), window, input));
+    const key = `window-${windows.length}`;
+    const formatted = formatWindowLabel(label);
+    // A label the host does not know is provider free text. The opaque key is
+    // the whole of what crosses for it.
+    windows.push(projectWindow(key, formatted === label ? key : formatted, window, input));
   }
 
   const models: GuestUsageModel[] = [];
@@ -115,10 +123,12 @@ const projectProvider = (
     if (entries.length === 0) continue;
     const [label, window] = entries[0];
     const name = nonEmpty(getDisplayModelName(modelName), modelName);
+    const key = `model-${models.length}-0`;
+    const formatted = formatWindowLabel(label);
     models.push({
       key: cut(modelName, GUEST_USAGE_ID_MAX),
       name: cut(name, GUEST_USAGE_LABEL_MAX),
-      windows: [projectWindow(`model-${modelName}-${label}`, formatWindowLabel(label), window, input)],
+      windows: [projectWindow(key, formatted === label ? key : formatted, window, input)],
     });
   }
 

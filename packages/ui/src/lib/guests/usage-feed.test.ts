@@ -89,30 +89,41 @@ describe('buildGuestUsageSnapshot', () => {
 
     const provider = snapshot.providers[0];
     expect(snapshot).toMatchObject({ displayMode: 'usage', updatedAt: 1_700_000_000_000, loading: true });
-    expect(provider.windows.map((window) => window.key)).toEqual(['window-5h', 'window-7d']);
+    expect(provider.windows.map((window) => window.key)).toEqual(['window-0', 'window-1']);
     expect(provider.windows[0]).toMatchObject({
       label: '5-Hour',
       usedPercent: 12.5,
       remainingPercent: 87.5,
       resetLabel: 'in 2 h',
-      valueLabel: '13%',
       tone: 'default',
     });
     expect(provider.models).toHaveLength(1);
     expect(provider.models[0]).toMatchObject({ key: 'gpt-5', name: 'gpt-5' });
-    expect(provider.models[0].windows[0]).toMatchObject({ key: 'model-gpt-5-weekly', label: 'Weekly', usedPercent: 30 });
+    expect(provider.models[0].windows[0]).toMatchObject({ key: 'model-0-0', label: 'Weekly', usedPercent: 30 });
   });
 
-  test('uses the remaining share for the value in remaining mode', () => {
+  test('formats a value from structured data and never forwards a provider valueLabel', () => {
+    const email = 'user@example.com';
+    const extAcme: QuotaProviderId = 'ext-acme';
     const snapshot = buildGuestUsageSnapshot(feed({
-      providers: [meta('claude', 'Claude')],
-      results: [providerResult({
-        providerId: 'claude',
-        usage: { windows: { '5h': usageWindow({ usedPercent: 25, remainingPercent: 75, valueLabel: null }) } },
-      })],
-      displayMode: 'remaining',
+      providers: [meta('openrouter', 'OpenRouter'), meta(extAcme, 'Acme')],
+      results: [
+        providerResult({
+          providerId: 'openrouter',
+          usage: { windows: { monthly: usageWindow({ valueLabel: email, value: { kind: 'spend', spent: 0.01, limit: null } }) } },
+        }),
+        providerResult({
+          providerId: extAcme,
+          usage: { windows: { AcmeOrg: usageWindow({ valueLabel: email }) } },
+        }),
+      ],
     }));
-    expect(snapshot.providers[0].windows[0].valueLabel).toBe('75%');
+
+    expect(snapshot.providers[0].windows[0].valueLabel).toBe('quota.value.spent');
+    expect(snapshot.providers[1].windows[0]).toMatchObject({ key: 'window-0', label: 'window-0', valueLabel: null });
+    const json = JSON.stringify(snapshot);
+    expect(json).not.toContain(email);
+    expect(json).not.toContain('AcmeOrg');
   });
 
   test('maps the Work Status tone thresholds on the used share', () => {

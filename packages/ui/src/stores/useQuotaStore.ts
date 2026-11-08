@@ -14,7 +14,8 @@ import { useConfigStore } from '@/stores/useConfigStore';
 import { runBackgroundNetworkTask } from '@/lib/background-network';
 
 const QUOTA_REFRESH_INTERVAL_MS = 3 * 60 * 1000;
-const QUOTA_OPEN_FRESHNESS_MS = 15 * 1000;
+/** A readout opened inside this window uses the sample it already has, not a new upstream read. */
+export const QUOTA_OPEN_FRESHNESS_MS = 15 * 1000;
 // Quotas and their display settings are read from the connected OpenChamber
 // instance, so both belong to that instance. Bumped on every reset so a
 // response in flight for the previous instance cannot land in the new one.

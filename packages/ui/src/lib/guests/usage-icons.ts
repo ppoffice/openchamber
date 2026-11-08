@@ -42,17 +42,44 @@ const spriteIconDataUrl = (name: string): string | null => {
   return body ? svgDataUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${body}</svg>`) : null;
 };
 
-type CachedIcon = { icon: string | null };
+/** A missing logo is retried later, so an offline start recovers without a reload. */
+const NULL_ICON_TTL_MS = 10 * 60 * 1000;
+
+type CachedIcon = { icon: string | null; expiresAt: number | null };
 const iconCache = new Map<string, CachedIcon>();
+// One request per key, shared by every provider read that wants it.
+const iconRequests = new Map<string, Promise<string | null>>();
 
-// A runtime switch can reuse both the provider id and the extension's icon
-// path for a different instance, so the cached value belongs to one runtime.
-const cacheKey = (providerId: string): string => `${getRuntimeKey()}\u0000${providerId}`;
+// A bundled or models.dev logo is the same on every instance, so its key has
+// no runtime. An extension package serves a different file per install, so its
+// key keeps the runtime identity.
+const iconKey = (providerId: string, extension: ExtensionQuotaProvider | undefined): string => (
+  extension ? `extension:${getRuntimeKey()}\u0000${providerId}` : `builtin:${providerId}`
+);
 
-const readCachedIcon = (providerId: string): CachedIcon | undefined => iconCache.get(cacheKey(providerId));
-const writeCachedIcon = (providerId: string, icon: string | null): string | null => {
-  iconCache.set(cacheKey(providerId), { icon });
+const readCachedIcon = (key: string): CachedIcon | undefined => {
+  const cached = iconCache.get(key);
+  if (!cached) return undefined;
+  if (cached.expiresAt !== null && cached.expiresAt <= Date.now()) {
+    iconCache.delete(key);
+    return undefined;
+  }
+  return cached;
+};
+
+const writeCachedIcon = (key: string, icon: string | null): string | null => {
+  iconCache.set(key, { icon, expiresAt: icon === null ? Date.now() + NULL_ICON_TTL_MS : null });
   return icon;
+};
+
+const startIconRequest = (key: string, load: () => Promise<string | null>): Promise<string | null> => {
+  const pending = iconRequests.get(key);
+  if (pending) return pending;
+  const settled = Promise.resolve().then(load).catch(() => null).then((icon) => writeCachedIcon(key, icon)).finally(() => {
+    if (iconRequests.get(key) === settled) iconRequests.delete(key);
+  });
+  iconRequests.set(key, settled);
+  return settled;
 };
 
 /** The icon when it needs no request: an extension's sprite icon, or a proven absence. */
@@ -60,15 +87,16 @@ const resolveUsageProviderIconSync = (
   providerId: string,
   extension: ExtensionQuotaProvider | undefined,
 ): string | null => {
-  const cached = readCachedIcon(providerId);
+  const key = iconKey(providerId, extension);
+  const cached = readCachedIcon(key);
   if (cached) return cached.icon;
   if (extension) {
     if (isGuestPackageSvgIcon(extension.icon)) return null;
-    return writeCachedIcon(providerId, spriteIconDataUrl(extension.icon));
+    return writeCachedIcon(key, spriteIconDataUrl(extension.icon));
   }
   // A provider with no logo at all is a settled answer; one with a URL is still pending.
   const { local, remote } = resolveProviderLogoUrls(providerId);
-  return local || remote ? null : writeCachedIcon(providerId, null);
+  return local || remote ? null : writeCachedIcon(key, null);
 };
 
 const readSvg = async (url: string): Promise<string | null> => {
@@ -106,15 +134,15 @@ const resolveUsageProviderIcon = async (
   providerId: string,
   extension: ExtensionQuotaProvider | undefined,
 ): Promise<string | null> => {
-  const cached = readCachedIcon(providerId);
+  const key = iconKey(providerId, extension);
+  const cached = readCachedIcon(key);
   if (cached) return cached.icon;
   if (extension && !isGuestPackageSvgIcon(extension.icon)) {
     return resolveUsageProviderIconSync(providerId, extension);
   }
-  const runtimeKey = getRuntimeKey();
-  const icon = extension ? await readPackageIcon(extension) : await readBuiltInIcon(providerId);
-  if (getRuntimeKey() !== runtimeKey) return null;
-  return writeCachedIcon(providerId, icon);
+  return startIconRequest(key, () => (
+    extension ? readPackageIcon(extension) : readBuiltInIcon(providerId)
+  ));
 };
 
 const computeIconMap = (
@@ -155,7 +183,10 @@ export const useUsageProviderIcons = (enabled: boolean): IconMap => {
 
   React.useEffect(() => {
     if (!enabled) return undefined;
-    const pending = providers.filter((provider) => !readCachedIcon(provider.id));
+    const pending = providers.filter((provider) => {
+      const extension = extensionProviders.find((entry) => entry.id === provider.id);
+      return !readCachedIcon(iconKey(provider.id, extension));
+    });
     if (pending.length === 0) return undefined;
     let cancelled = false;
     void Promise.all(pending.map((provider) => resolveUsageProviderIcon(
