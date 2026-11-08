@@ -95,6 +95,7 @@ describe('buildGuestUsageSnapshot', () => {
       usedPercent: 12.5,
       remainingPercent: 87.5,
       resetLabel: 'in 2 h',
+      valueLabel: '13%',
       tone: 'default',
     });
     expect(provider.models).toHaveLength(1);
@@ -124,6 +125,63 @@ describe('buildGuestUsageSnapshot', () => {
     const json = JSON.stringify(snapshot);
     expect(json).not.toContain(email);
     expect(json).not.toContain('AcmeOrg');
+  });
+
+  test('built-in window labels match Work Status, extension labels stay opaque', () => {
+    const extAcme: QuotaProviderId = 'ext-acme';
+    const snapshot = buildGuestUsageSnapshot(feed({
+      providers: [meta('codex', 'Codex'), meta(extAcme, 'Acme')],
+      results: [
+        providerResult({
+          providerId: 'codex',
+          usage: {
+            windows: {
+              '30d': usageWindow(),
+              '1d': usageWindow(),
+              '12h': usageWindow(),
+              custom: usageWindow(),
+            },
+          },
+        }),
+        providerResult({
+          providerId: extAcme,
+          usage: { windows: { '30d': usageWindow(), AcmeOrg: usageWindow() } },
+        }),
+      ],
+    }));
+
+    expect(snapshot.providers[0].windows.map((window) => window.label)).toEqual([
+      '30-Day Limit',
+      '1-Day Limit',
+      '12-Hour Limit',
+      'custom',
+    ]);
+    expect(snapshot.providers[1].windows.map((window) => window.label)).toEqual([
+      '30-Day Limit',
+      'window-1',
+    ]);
+    expect(JSON.stringify(snapshot.providers[1])).not.toContain('AcmeOrg');
+  });
+
+  test('built-in valueLabels pass through as Work Status shows them; extension ones do not', () => {
+    const extAcme: QuotaProviderId = 'ext-acme';
+    const snapshot = buildGuestUsageSnapshot(feed({
+      providers: [meta('codex', 'Codex'), meta(extAcme, 'Acme')],
+      results: [
+        providerResult({
+          providerId: 'codex',
+          usage: { windows: { credits_balance: usageWindow({ usedPercent: null, remainingPercent: null, valueLabel: '$12.34' }) } },
+        }),
+        providerResult({
+          providerId: extAcme,
+          usage: { windows: { credits_balance: usageWindow({ usedPercent: null, remainingPercent: null, valueLabel: 'ops@example.com' }) } },
+        }),
+      ],
+    }));
+
+    expect(snapshot.providers[0].windows[0].valueLabel).toBe('$12.34');
+    expect(snapshot.providers[1].windows[0].valueLabel).toBeNull();
+    expect(JSON.stringify(snapshot.providers[1])).not.toContain('ops@example.com');
   });
 
   test('maps the Work Status tone thresholds on the used share', () => {

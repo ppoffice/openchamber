@@ -4,7 +4,7 @@ import type { TimeFormatPreference } from '@/stores/useUIStore';
 import { getCurrentIntlLocale, type I18nKey, type I18nParams } from '@/lib/i18n';
 import type { UsageWindow } from '@/types/quota';
 
-const t = (key: Parameters<typeof formatMessage>[1]) => formatMessage(useI18nStore.getState().dictionary, key);
+const t = (key: Parameters<typeof formatMessage>[1], params?: I18nParams) => formatMessage(useI18nStore.getState().dictionary, key, params);
 
 export const clampPercent = (value: number | null): number | null => {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -97,28 +97,49 @@ export const resolveUsageTone = (percent: number | null): 'safe' | 'warn' | 'cri
   return 'safe';
 };
 
+const WINDOW_LABEL_KEYS = new Map<string, I18nKey>([
+  ['5h', 'quota.window.5h'],
+  ['7d', 'quota.window.7d'],
+  ['extra_usage', 'quota.window.extraUsage'],
+  ['weekly', 'quota.window.weekly'],
+  ['daily', 'quota.window.daily'],
+  ['monthly', 'quota.window.monthly'],
+  ['credits', 'quota.window.credits'],
+  ['key_limit', 'quota.window.keyLimit'],
+  ['credits_balance', 'quota.window.creditsBalance'],
+  ['monthly_credits', 'quota.window.monthlyCredits'],
+  ['purchased_credits', 'quota.window.purchasedCredits'],
+  ['free_credits', 'quota.window.freeCredits'],
+  ['billing_cycle', 'quota.window.billingCycle'],
+  ['plan_limit', 'quota.window.planLimit'],
+  ['auto', 'quota.window.auto'],
+  ['api', 'quota.window.api'],
+  ['on_demand', 'quota.window.onDemand'],
+  ['session', 'quota.window.session'],
+  ['premium', 'quota.window.premium'],
+  ['chat', 'quota.window.chat'],
+  ['completions', 'quota.window.completions'],
+  ['premium_interactions', 'quota.window.premiumInteractions'],
+]);
+
+// Providers build window keys from numbers, such as `30d` or `12h`; Work
+// Status translates them like its fixed keys.
+const DURATION_WINDOW = /^(\d+)([dhs])$/;
+
+/** A window key the host has a translated label for, fixed or numeric. */
+export const isKnownWindowLabel = (label: string): boolean => (
+  WINDOW_LABEL_KEYS.has(label) || DURATION_WINDOW.test(label)
+);
+
 export const formatWindowLabel = (label: string): string => {
-  if (label === '5h') return t('quota.window.5h');
-  if (label === '7d') return t('quota.window.7d');
-  if (label === 'extra_usage') return t('quota.window.extraUsage');
-  if (label === 'weekly') return t('quota.window.weekly');
-  if (label === 'daily') return t('quota.window.daily');
-  if (label === 'monthly') return t('quota.window.monthly');
-  if (label === 'credits') return t('quota.window.credits');
-  if (label === 'key_limit') return t('quota.window.keyLimit');
-  if (label === 'credits_balance') return t('quota.window.creditsBalance');
-  if (label === 'monthly_credits') return t('quota.window.monthlyCredits');
-  if (label === 'purchased_credits') return t('quota.window.purchasedCredits');
-  if (label === 'free_credits') return t('quota.window.freeCredits');
-  if (label === 'billing_cycle') return t('quota.window.billingCycle');
-  if (label === 'plan_limit') return t('quota.window.planLimit');
-  if (label === 'auto') return t('quota.window.auto');
-  if (label === 'api') return t('quota.window.api');
-  if (label === 'on_demand') return t('quota.window.onDemand');
-  if (label === 'session') return t('quota.window.session');
-  if (label === 'premium') return t('quota.window.premium');
-  if (label === 'chat') return t('quota.window.chat');
-  if (label === 'completions') return t('quota.window.completions');
-  if (label === 'premium_interactions') return t('quota.window.premiumInteractions');
+  const key = WINDOW_LABEL_KEYS.get(label);
+  if (key) return t(key);
+  const match = DURATION_WINDOW.exec(label);
+  if (match) {
+    const count = Number(match[1]);
+    if (match[2] === 'd') return t('quota.window.days', { count });
+    if (match[2] === 'h') return t('quota.window.hours', { count });
+    return t('quota.window.seconds', { count });
+  }
   return label;
 };
