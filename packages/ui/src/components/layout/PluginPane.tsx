@@ -16,6 +16,7 @@ import {
   type GuestPopoverContext,
   type GuestPopoverRequest,
   type GuestMessage,
+  type GuestUsageSnapshot,
   type HostMessage,
   type HostReadyContext,
   type ResolveResultPayload,
@@ -41,6 +42,7 @@ import {
   buildSessionLifecycleMessage,
   buildSessionMessage,
   buildSettingsMessage,
+  buildUsageMessage,
   guestSessionLifecyclePhase,
   guestSessionModelId,
   toGuestSessionSnapshot,
@@ -82,6 +84,11 @@ import { useGuestsStore } from '@/lib/guests/store';
 import { readGuestWorkspace, observeGuestWorkspace, openGuestSession } from '@/lib/guests/workspace';
 import { observeGuestShells, readGuestShellOutput } from '@/lib/guests/shells';
 import { guestStorageOperation } from '@/lib/guests/storage';
+import { buildGuestUsageSnapshot } from '@/lib/guests/usage-feed';
+import { useUsageProviderIcons } from '@/lib/guests/usage-icons';
+import { quotaProviderIds, quotaProviderList } from '@/lib/quota/extensionProviders';
+import { useQuotaAutoRefresh, useQuotaStore } from '@/stores/useQuotaStore';
+import { useUIStore } from '@/stores/useUIStore';
 import { getGuestPopoverController, guestPopoverOwnerBlocked, positionGuestPopover, type GuestPopoverActivation, type GuestPopoverPosition } from '@/lib/guests/popovers';
 import { createGuestStatusControls, type GuestStatusControlBinding } from '@/lib/guests/status-controls';
 import { showGuestToast } from '@/lib/guests/toast';
@@ -275,10 +282,24 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
   const readableColors = React.useMemo(() => getReadableThemeColors(currentTheme), [currentTheme]);
   // A frame in a docked panel paints the panel's colour, not the chat's.
   const pageColors = usePageColors();
+  // The usage feed is served everywhere the app has quota readouts; VS Code and
+  // mobile answer `UNSUPPORTED`. A grant failure is answered at subscribe time.
+  const usageServed = !isVSCodeRuntime() && !isMobileSurfaceRuntime();
+  const usageGranted = guestMay(guest, 'usage');
+  const [usageSubscribed, setUsageSubscribed] = React.useState(false);
+  const usageIcons = useUsageProviderIcons(usageSubscribed && usageGranted && usageServed);
+  const lastUsageSerializedRef = React.useRef<string | null>(null);
+  // A subscribed frame is a visible readout for the three-minute refresh. The
+  // feed carries every configured provider, not just the shown ones.
+  useQuotaAutoRefresh(usageSubscribed && usageGranted, true);
+  React.useEffect(() => {
+    if (!usageGranted) setUsageSubscribed(false);
+  }, [usageGranted]);
   const ready = React.useMemo<HostReadyContext>(() => {
     const features: NonNullable<HostReadyContext['features']> = {};
     if (guest?.storageId && globalThis.indexedDB) features.deviceStorage = true;
     if (surface === 'status' && onStatusControls) features.statusControls = true;
+    if (usageServed) features.usage = true;
     if (!popoverHost && !popover && !headless && !isVSCodeRuntime() && !isMobileSurfaceRuntime()
       && (surface === 'panel' || surface === 'page' || surface === 'status')) features.popovers = true;
     // A hidden frame is nobody's panel: it neither takes kept answers nor leaves any.
@@ -336,7 +357,7 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
     popover: popoverHost?.context ?? popover,
     features,
     };
-  }, [block, connection, currentTheme, pageColors, readableColors, directory, guest?.backgroundEntry, guest?.storageId, headless, item, locale, oauthStatus, onStatusControls, popover, popoverHost, sessionSnapshot, surface]);
+  }, [block, connection, currentTheme, pageColors, readableColors, directory, guest?.backgroundEntry, guest?.storageId, headless, item, locale, oauthStatus, onStatusControls, popover, popoverHost, sessionSnapshot, surface, usageServed]);
 
   const fileEditorEntry = surface === 'file' && fileEditor
     ? guest?.fileEditors?.find((editor) => editor.id === fileEditor.editorId)?.entry ?? null
@@ -391,6 +412,26 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
   guestAuthRef.current = guest?.integration?.auth;
   const translateRef = React.useRef(t);
   translateRef.current = t;
+  const usageIconsRef = React.useRef(usageIcons);
+  usageIconsRef.current = usageIcons;
+  const currentUsageSnapshot = React.useCallback((icons: ReadonlyMap<string, string | null>): GuestUsageSnapshot => {
+    const quota = useQuotaStore.getState();
+    return buildGuestUsageSnapshot({
+      results: quota.results,
+      refreshErrors: quota.refreshErrors,
+      providers: quotaProviderList(quota.extensionProviders),
+      dropdownProviderIds: quota.dropdownProviderIds,
+      selectedModels: quota.selectedModels,
+      displayMode: quota.displayMode,
+      timeFormatPreference: useUIStore.getState().timeFormatPreference,
+      translate: translateRef.current,
+      icons,
+      updatedAt: quota.lastUpdated,
+      loading: quota.isLoading,
+    });
+  }, []);
+  const currentUsageSnapshotRef = React.useRef(currentUsageSnapshot);
+  currentUsageSnapshotRef.current = currentUsageSnapshot;
   const onAttachRef = React.useRef(onAttach);
   onAttachRef.current = onAttach;
   const onDismissRef = React.useRef(onDismiss);
@@ -425,6 +466,39 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
   const postToGuest = React.useCallback((message: HostMessage) => {
     iframeRef.current?.contentWindow?.postMessage(message, OPAQUE_FRAME_TARGET_ORIGIN);
   }, []);
+
+  // One push per settled change. The store updates once per provider inside a
+  // refresh, so a 50 ms window turns a burst into one snapshot; a snapshot
+  // that serializes the same as the last one is not sent again.
+  React.useEffect(() => {
+    if (!usageSubscribed || !usageGranted || !usageServed) return undefined;
+    let timer: number | null = null;
+    const flush = () => {
+      timer = null;
+      const snapshot = currentUsageSnapshotRef.current(usageIconsRef.current);
+      const serialized = JSON.stringify(snapshot);
+      if (serialized === lastUsageSerializedRef.current) return;
+      lastUsageSerializedRef.current = serialized;
+      postToGuest(buildUsageMessage(snapshot));
+    };
+    const schedule = () => {
+      if (timer !== null) return;
+      timer = window.setTimeout(flush, 50);
+    };
+    // An icon read or a locale change may land after the subscribe reply.
+    flush();
+    const stopQuota = useQuotaStore.subscribe(schedule);
+    // The feed reads only the time format from the UI store; a dialog or a
+    // theme change must not rebuild a snapshot.
+    const stopUI = useUIStore.subscribe((state, previous) => {
+      if (state.timeFormatPreference !== previous.timeFormatPreference) schedule();
+    });
+    return () => {
+      stopQuota();
+      stopUI();
+      if (timer !== null) window.clearTimeout(timer);
+    };
+  }, [locale, postToGuest, usageGranted, usageIcons, usageServed, usageSubscribed]);
 
   const sendBackgroundAction = React.useCallback(() => {
     const message = backgroundAction?.takeMessage();
@@ -609,12 +683,18 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
     });
     let stopLateGenerate: (() => void) | null = null;
     const stopLateGenerateListening = () => { stopLateGenerate?.(); stopLateGenerate = null; };
-    const runtimeUnsubscribe = subscribeRuntimeEndpointChanged(() => { disposed = true; closeActivePopover('owner'); statusControls.dispose(); clearSubscriptions(); stopOauthPoll(); });
+    const runtimeUnsubscribe = subscribeRuntimeEndpointChanged(() => { disposed = true; closeActivePopover('owner'); statusControls.dispose(); clearSubscriptions(); stopOauthPoll(); setUsageSubscribed(false); lastUsageSerializedRef.current = null; });
     const requireSessions = () => {
       if (!guestMay(currentGuest(), 'sessions')) throw new HostRequestError('NOT_GRANTED', NOT_GRANTED_MESSAGE);
     };
     const requireShells = () => {
       if (!guestMay(currentGuest(), 'shells')) throw new HostRequestError('NOT_GRANTED', NOT_GRANTED_MESSAGE);
+    };
+    const requireUsage = () => {
+      if (!guestMay(currentGuest(), 'usage')) throw new HostRequestError('NOT_GRANTED', NOT_GRANTED_MESSAGE);
+    };
+    const requireUsageHost = () => {
+      if (!usageServed) throw new HostRequestError('UNSUPPORTED', 'This host does not serve the usage feed.');
     };
     const onMessage = (event: MessageEvent) => {
       const frame = iframeRef.current;
@@ -640,6 +720,10 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
         stopLateGenerateListening();
         acknowledgeHandshake();
         clearSubscriptions();
+        // A new document subscribes again after the ready it receives; the
+        // previous document's subscription is not this one's.
+        setUsageSubscribed(false);
+        lastUsageSerializedRef.current = null;
         pushHostState();
         connectFileChannel();
         registerResolver();
@@ -721,6 +805,30 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
         setStatusControls: (controls) => {
           if (surface !== 'status' || !onStatusControlsRef.current) throw new HostRequestError('UNSUPPORTED', 'This frame has no status header.');
           statusControls.set(controls);
+        },
+        usageSubscribe: () => {
+          requireUsageHost();
+          requireUsage();
+          setUsageSubscribed(true);
+          return currentUsageSnapshotRef.current(usageIconsRef.current);
+        },
+        pushUsage: (snapshot) => {
+          if (!ownsFrame() || !guestMay(guestRef.current, 'usage')) return;
+          lastUsageSerializedRef.current = JSON.stringify(snapshot);
+          postToGuest(buildUsageMessage(snapshot));
+        },
+        usageRefresh: async () => {
+          requireUsageHost();
+          requireUsage();
+          // Every provider the feed may carry, not only the shown ones: the
+          // snapshot lists all configured providers and marks the shown ones.
+          await useQuotaStore.getState().fetchQuotas(quotaProviderIds(useQuotaStore.getState().extensionProviders));
+        },
+        openUsageSettings: () => {
+          requireUsageHost();
+          requireUsage();
+          useUIStore.getState().setSettingsPage('usage');
+          useUIStore.getState().setSettingsDialogOpen(true);
         },
         openSession: (id) => { requireSessions(); openGuestSession(id); },
         toast: (request) => {
@@ -1022,6 +1130,8 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
     window.addEventListener('message', onMessage);
     return () => {
       disposed = true;
+      setUsageSubscribed(false);
+      lastUsageSerializedRef.current = null;
       if (!childPopover) closeActivePopover('owner');
       statusControls.dispose();
       if (statusControlsRef.current === statusControls) statusControlsRef.current = null;
@@ -1030,7 +1140,7 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
       runtimeUnsubscribe();
       window.removeEventListener('message', onMessage);
     };
-  }, [acknowledgeHandshake, backgroundAction, clearPopoverCloseTimer, closeActivePopover, connectFileChannel, frameKey, guestEnabled, guestEntry, headless, popover, postToGuest, pushHostState, refreshOauth, registerResolver, schedulePopoverClose, sendBackgroundAction, setOauthStatus, src, srcDoc, stopOauthPoll, surface]);
+  }, [acknowledgeHandshake, backgroundAction, clearPopoverCloseTimer, closeActivePopover, connectFileChannel, frameKey, guestEnabled, guestEntry, headless, popover, postToGuest, pushHostState, refreshOauth, registerResolver, schedulePopoverClose, sendBackgroundAction, setOauthStatus, src, srcDoc, stopOauthPoll, surface, usageServed]);
 
   // A project switch retires header callbacks, not the still-mounted frame's
   // workspace observers or unrelated in-flight requests.

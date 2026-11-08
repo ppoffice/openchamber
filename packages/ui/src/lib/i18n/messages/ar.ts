@@ -2034,6 +2034,8 @@ export const dict = {
   'header.services.noRateLimits': 'لا تتوفر حدود للمعدّل.',
   'header.services.noRateLimitsReported': 'لم يُبلَّغ عن حدود للمعدّل.',
   'header.services.usageRefreshFailedStale': 'يُعرض الاستخدام المستلم سابقًا. تعذّر التحديث: {error}',
+  'header.services.usageRefreshFailed': 'يُعرض الاستخدام المستلم سابقًا.',
+  'header.services.usageUnavailable': 'تعذّر قراءة الاستخدام.',
   'header.services.remoteUpdate.title': 'تحديث النسخة البعيدة',
   'header.services.remoteUpdate.checking': 'جارٍ البحث عن تحديثات…',
   'header.services.remoteUpdate.upToDate': 'هذه النسخة محدّثة.',

@@ -2918,6 +2918,8 @@ export const dict: Record<I18nKey, string> = {
   'header.services.noRateLimits': 'Brak dostępnych limitów użycia.',
   'header.services.noRateLimitsReported': 'Nie zgłoszono limitów użycia.',
   'header.services.usageRefreshFailedStale': 'Wyświetlane są wcześniej otrzymane dane użycia. Odświeżanie nie powiodło się: {error}',
+  'header.services.usageRefreshFailed': 'Wyświetlane są wcześniej otrzymane dane użycia.',
+  'header.services.usageUnavailable': 'Nie udało się odczytać użycia.',
   'header.services.remoteUpdate.title': 'Aktualizacja zdalnej instancji',
   'header.services.remoteUpdate.checking': 'Sprawdzanie aktualizacji...',
   'header.services.remoteUpdate.upToDate': 'Ta instancja jest aktualna.',

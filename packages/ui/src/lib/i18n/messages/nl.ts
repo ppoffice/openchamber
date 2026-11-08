@@ -2121,6 +2121,8 @@ export const dict = {
   'header.services.noRateLimits': 'Geen snelheidslimieten beschikbaar.',
   'header.services.noRateLimitsReported': 'Geen snelheidslimieten gemeld.',
   'header.services.usageRefreshFailedStale': 'Eerder ontvangen gebruik wordt getoond. Vernieuwen mislukt: {error}',
+  'header.services.usageRefreshFailed': 'Eerder ontvangen gebruik wordt getoond.',
+  'header.services.usageUnavailable': 'Gebruik kon niet worden gelezen.',
   'header.services.remoteUpdate.title': 'Update van remote instantie',
   'header.services.remoteUpdate.checking': 'Zoeken naar updates...',
   'header.services.remoteUpdate.upToDate': 'Deze instantie is up-to-date.',

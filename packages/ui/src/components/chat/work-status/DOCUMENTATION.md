@@ -544,6 +544,10 @@ requested height is remembered per extension id and version for the app
 session (a module-level map, one number per installed extension), so folding
 and reopening a section does not jump back to the manifest default.
 
+A mounted, granted frame subscribed to the usage feed is one of the visible
+readouts `useQuotaAutoRefresh` counts, so the three-minute quota refresh runs
+while it is on screen.
+
 An extension section is expanded by default unless its catalog row declares
 `statusDefaultExpanded: false`; an explicit saved expansion choice wins. A row
 with `statusRequiresProject` is absent, including from presence reporting, when

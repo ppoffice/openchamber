@@ -2121,6 +2121,8 @@ export const dict = {
   'header.services.noRateLimits': 'No rate limits available.',
   'header.services.noRateLimitsReported': 'No rate limits reported.',
   'header.services.usageRefreshFailedStale': 'Showing previously received usage. Refresh failed: {error}',
+  'header.services.usageRefreshFailed': 'Showing previously received usage.',
+  'header.services.usageUnavailable': 'Usage could not be read.',
   'header.services.remoteUpdate.title': 'Remote instance update',
   'header.services.remoteUpdate.checking': 'Looking for updates...',
   'header.services.remoteUpdate.upToDate': 'This instance is up to date.',

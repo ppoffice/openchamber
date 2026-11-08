@@ -2034,6 +2034,8 @@ export const dict = {
   'header.services.noRateLimits': 'אין מגבלות קצב זמינות.',
   'header.services.noRateLimitsReported': 'לא דווחו מגבלות קצב.',
   'header.services.usageRefreshFailedStale': 'מוצג השימוש שהתקבל קודם. הרענון נכשל: {error}',
+  'header.services.usageRefreshFailed': 'מוצג השימוש שהתקבל קודם.',
+  'header.services.usageUnavailable': 'לא ניתן היה לקרוא את השימוש.',
   'header.services.remoteUpdate.title': 'עדכון מופע מרוחק',
   'header.services.remoteUpdate.checking': 'מחפש עדכונים…',
   'header.services.remoteUpdate.upToDate': 'המופע הזה מעודכן.',

@@ -51,7 +51,8 @@ const normalizeProviderId = (providerId: string | null | undefined) => {
         .replace(/\s+/g, '-');
 };
 
-const buildLogoCandidates = (providerId: string | null | undefined) => {
+/** The ids a provider's logo may be filed under, most specific first. */
+export const buildLogoCandidates = (providerId: string | null | undefined) => {
     const normalized = normalizeProviderId(providerId);
     if (!normalized) {
         return [] as string[];
@@ -67,15 +68,23 @@ const buildLogoCandidates = (providerId: string | null | undefined) => {
 };
 
 const resolveProviderLogoSrc = (providerId: string | null | undefined): string | null => {
+    const { local, remote } = resolveProviderLogoUrls(providerId);
+    return local ?? remote;
+};
+
+/**
+ * Both sources the app's own provider logo resolves to, in its order: a
+ * bundled asset, then the provider's mark from models.dev. `null` means this
+ * provider has no such source.
+ */
+export const resolveProviderLogoUrls = (providerId: string | null | undefined) => {
     const candidates = buildLogoCandidates(providerId);
     const localResolvedId = candidates.find((candidate) => LOCAL_PROVIDER_LOGO_MAP.has(candidate)) ?? null;
-    const localLogoSrc = localResolvedId ? LOCAL_PROVIDER_LOGO_MAP.get(localResolvedId) ?? null : null;
-    if (localLogoSrc) {
-        return localLogoSrc;
-    }
-
     const remoteResolvedId = candidates[0] ?? null;
-    return remoteResolvedId ? `https://models.dev/logos/${remoteResolvedId}.svg` : null;
+    return {
+        local: localResolvedId ? LOCAL_PROVIDER_LOGO_MAP.get(localResolvedId) ?? null : null,
+        remote: remoteResolvedId ? `https://models.dev/logos/${remoteResolvedId}.svg` : null,
+    };
 };
 
 const preloadProviderLogo = (providerId: string | null | undefined): void => {

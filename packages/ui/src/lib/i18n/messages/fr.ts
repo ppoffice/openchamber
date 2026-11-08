@@ -1874,6 +1874,8 @@ export const dict = {
   'header.services.noRateLimits': 'Aucune limite de taux disponible.',
   'header.services.noRateLimitsReported': 'Aucune limite de taux signalée.',
   'header.services.usageRefreshFailedStale': 'Les données d’utilisation précédentes sont affichées. Échec de l’actualisation : {error}',
+  'header.services.usageRefreshFailed': 'Les données d\'utilisation précédemment reçues sont affichées.',
+  'header.services.usageUnavailable': 'Impossible de lire l\'utilisation.',
   'header.services.used': 'Utilisé',
   'header.services.remaining': 'Restant',
   'header.services.modelFamily.other': 'Autre',

@@ -1988,6 +1988,8 @@ export const dict = {
   'header.services.noRateLimits': 'Kullanılabilir rate limit yok.',
   'header.services.noRateLimitsReported': 'Bildirilen rate limit yok.',
   'header.services.usageRefreshFailedStale': 'Daha önce alınan kullanım verileri gösteriliyor. Yenileme başarısız: {error}',
+  'header.services.usageRefreshFailed': 'Daha önce alınan kullanım verileri gösteriliyor.',
+  'header.services.usageUnavailable': 'Kullanım okunamadı.',
   'header.services.remoteUpdate.title': 'Uzak instance güncellemesi',
   'header.services.remoteUpdate.checking': 'Güncellemeler aranıyor...',
   'header.services.remoteUpdate.upToDate': 'Bu instance güncel.',

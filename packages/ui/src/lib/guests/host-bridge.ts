@@ -27,6 +27,7 @@ import {
   type GuestMessage,
   type GuestRequest,
   type GuestSettings,
+  type GuestUsageSnapshot,
   type HostMessage,
   type HostReadyContext,
   type HostRequestErrorCode,
@@ -103,6 +104,17 @@ type HostBridgeEffects = {
   openPopover?: (request: GuestPopoverRequest) => void;
   closePopover?: (id: string, reason: 'closed' | 'escape' | undefined) => void;
   setPopoverAnchorActive?: (id: string, active: boolean) => void;
+  /**
+   * Mark this frame subscribed to the usage feed and answer the snapshot to
+   * publish first. Throws `NOT_GRANTED` or `UNSUPPORTED` before subscribing.
+   */
+  usageSubscribe: () => GuestUsageSnapshot;
+  /** Post one snapshot to the frame; `usage-subscribe` and every change go through it. */
+  pushUsage: (snapshot: GuestUsageSnapshot) => void;
+  /** Refetch every provider the feed may carry; resolves when the reads settled. */
+  usageRefresh: () => Promise<void>;
+  /** Open Settings → Usage. */
+  openUsageSettings: () => void;
 };
 
 export const buildReadyMessage = (payload: HostReadyContext): HostMessage => ({
@@ -167,6 +179,13 @@ export const buildSessionLifecycleMessage = (event: SessionLifecycleEvent): Host
   v: OPENCHAMBER_SDK_API_VERSION,
   type: 'session-lifecycle',
   payload: event,
+});
+
+export const buildUsageMessage = (snapshot: GuestUsageSnapshot): HostMessage => ({
+  channel: OPENCHAMBER_SDK_CHANNEL,
+  v: OPENCHAMBER_SDK_API_VERSION,
+  type: 'usage',
+  payload: { snapshot },
 });
 
 export const guestSessionLifecyclePhase = (
@@ -276,12 +295,19 @@ export const answerGuestMessage = async (
     case 'shell-stop': return okResult(message.id, await effects.shellStop(message.payload));
     case 'storage': return okResult(message.id, await effects.storage(message.payload));
     case 'status-controls': effects.setStatusControls(message.payload.controls); return okResult(message.id);
-    // The usage feed is served by the pane in a later change; until then every
-    // request is refused the way an old host refuses it.
-    case 'usage-subscribe':
+    case 'usage-subscribe': {
+      // The effect refuses without the `usage` grant and on a runtime that
+      // serves no feed, before anything is marked subscribed.
+      const snapshot = effects.usageSubscribe();
+      effects.pushUsage(snapshot);
+      return okResult(message.id);
+    }
     case 'usage-refresh':
+      await effects.usageRefresh();
+      return okResult(message.id);
     case 'open-usage-settings':
-      return errorResult(message.id, 'This host does not support the usage feed.', 'UNSUPPORTED');
+      effects.openUsageSettings();
+      return okResult(message.id);
     case 'open-session': effects.openSession(message.payload.sessionId); return okResult(message.id);
     // No answer: the pane handles these itself. File editor traffic belongs to
     // its file channel, not to a request/result pair.
