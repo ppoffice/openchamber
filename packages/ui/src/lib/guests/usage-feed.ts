@@ -14,7 +14,7 @@ import {
   type GuestUsageWindow,
 } from '@openchamber/sdk';
 
-import { formatQuotaResetLabel, formatQuotaWindowValueLabel, formatWindowLabel, resolveUsageTone } from '@/lib/quota';
+import { formatQuotaResetLabel, formatQuotaWindowValueLabel, formatWindowLabel, isKnownWindowLabel, resolveUsageTone } from '@/lib/quota';
 import { getDisplayModelName } from '@/lib/quota/model-families';
 import type { I18nKey, I18nParams } from '@/lib/i18n';
 import type { QuotaProviderMeta } from '@/lib/quota';
@@ -69,13 +69,15 @@ const projectWindow = (
   label: string,
   window: UsageWindow,
   input: UsageFeedInput,
+  extensionProvider: boolean,
 ): GuestUsageWindow => {
   const usedPercent = percent(window.usedPercent);
   const remainingPercent = percent(window.remainingPercent);
   const displayPercent = input.displayMode === 'remaining' ? remainingPercent : usedPercent;
-  // Only a string the host made from structured data crosses. A provider's or
-  // extension's own `valueLabel` is free text and can carry an account name.
-  const valueLabel = window.value !== undefined || window.creditsUsed !== undefined
+  // A built-in provider's valueLabel is the server's own formatted string and
+  // is safe to draw as Work Status does. An extension's valueLabel is free
+  // text, so only a string the host made from structured data crosses.
+  const valueLabel = !extensionProvider || window.value !== undefined || window.creditsUsed !== undefined
     ? formatQuotaWindowValueLabel(window, displayPercent, input.translate)
     : null;
   const resetLabel = formatQuotaResetLabel(
@@ -101,14 +103,19 @@ const projectProvider = (
   result: ProviderResult | undefined,
   input: UsageFeedInput,
 ): GuestUsageProvider => {
+  const extensionProvider = provider.id.startsWith('ext-');
+  // A built-in gets exactly the label Work Status draws, including the raw
+  // server key when the host has no translation. An extension's own label is
+  // free text, so only a known key is translated and the rest is its opaque key.
+  const labelFor = (rawLabel: string, key: string): string => (
+    extensionProvider && !isKnownWindowLabel(rawLabel) ? key : formatWindowLabel(rawLabel)
+  );
+
   const windows: GuestUsageWindow[] = [];
   for (const [label, window] of Object.entries(result?.usage?.windows ?? {})) {
     if (windows.length >= GUEST_USAGE_WINDOWS_MAX) break;
     const key = `window-${windows.length}`;
-    const formatted = formatWindowLabel(label);
-    // A label the host does not know is provider free text. The opaque key is
-    // the whole of what crosses for it.
-    windows.push(projectWindow(key, formatted === label ? key : formatted, window, input));
+    windows.push(projectWindow(key, labelFor(label, key), window, input, extensionProvider));
   }
 
   const models: GuestUsageModel[] = [];
@@ -124,11 +131,10 @@ const projectProvider = (
     const [label, window] = entries[0];
     const name = nonEmpty(getDisplayModelName(modelName), modelName);
     const key = `model-${models.length}-0`;
-    const formatted = formatWindowLabel(label);
     models.push({
       key: cut(modelName, GUEST_USAGE_ID_MAX),
       name: cut(name, GUEST_USAGE_LABEL_MAX),
-      windows: [projectWindow(key, formatted === label ? key : formatted, window, input)],
+      windows: [projectWindow(key, labelFor(label, key), window, input, extensionProvider)],
     });
   }
 
