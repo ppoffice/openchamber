@@ -10,7 +10,7 @@ around the chat by `components/layout/ContextPanel.tsx` (one per zone) and
 
 ## Model
 
-Full-screen extension pages are separate from this rail registry. `contributes.page` appears in one sidebar-header menu and uses `useUIStore.openGuestPageId`, the same mutually exclusive main-page lifecycle as Archive and Scheduled tasks. It mounts `PluginPane` with `surface="page"`, closes on runtime switch/uninstall/disable, and is not persisted. `openContextSurface` and the guest's `openSurface` cannot open a full-screen page. Work Status sections (`contributes.statusSection`) are not rail surfaces either: they mount `PluginPane` with `surface="status"` inside the chat's Work Status panel and never open a tab. The entry-point restrictions below describe context-rail surfaces only.
+Full-screen extension pages are separate from this rail registry. `contributes.page` appears in one sidebar-header menu and uses `useUIStore.openGuestPageId`, the same mutually exclusive main-page lifecycle as Archive and Scheduled tasks. It mounts `PluginPane` with `surface="page"`, closes on runtime switch/uninstall/disable, and is not persisted. `openContextSurface` and the guest's `openSurface` cannot open a full-screen page. Work Status sections (`contributes.statusSection`) are not rail surfaces either: they mount `PluginPane` with `surface="status"` inside the chat's Work Status panel and never open a tab. Header items (`contributes.headerItem`) are a third non-rail kind: they mount `PluginPane` with `surface="header"` in the app header and never open a tab. The entry-point restrictions below describe context-rail surfaces only.
 
 - A surface maps 1:1 to a `ContextPanelMode` tab mode in `useUIStore`.
   Built-in modes stay a closed list. Installed guests add `plugin:${id}`
@@ -152,6 +152,34 @@ the transition re-laid out the chat and the surface on every frame anyway.
 Following the pointer each frame costs about a fifth of the main thread with
 a 120-turn session and an open editor, once the work that reacts to widths
 waits for the release.
+
+## Header items
+
+An installed guest may put a strip in the app header (`contributes.headerItem`,
+see `packages/sdk/DOCUMENTATION.md`). `HeaderExtensionItems`
+(`components/layout/HeaderExtensionItems.tsx`) mounts one `PluginPane` per
+active guest with `surface="header"` in `Header.tsx`, left of the context ring:
+the same sandbox, guest-scoped token, grants and pause gates as a rail panel.
+The header fixes the frame at `GUEST_HEADER_ITEM_HEIGHT` (28 px); the guest
+asks for a width with `setWidth` and sees the width it got as its own viewport,
+so it hides what does not fit. The strip appears in neither VS Code nor mobile,
+which load no guests, and it is hidden while a full-page surface owns the
+header. A header frame may open the same sandboxed anchored popover a Work
+Status section does, with its header item as the owner; the card opens below
+the header.
+
+### Why the session tabs keep their width before a header item shrinks
+
+The tabs are how people move between what they are doing; a usage strip is an
+addition to that row. Both are flex children of the header's inner row, so the
+browser sizes them together. The tabs row takes `flex: 1 1 auto`, which gives
+it its content width as a basis, and a header item takes its requested width as
+a basis with `flex-shrink: 1000` against the tabs row's 1. The item gives way
+first and stops at the minimum its guest named; that minimum violation freezes
+the item, and the remaining shrink lands on the tabs row, which scrolls its
+tabs. With one shrink factor both would lose width together, proportional to
+their bases, and the strip would take from the tabs from the first pixel that
+goes missing.
 
 ## Adding a surface
 

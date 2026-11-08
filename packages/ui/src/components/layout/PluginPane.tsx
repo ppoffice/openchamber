@@ -19,6 +19,7 @@ import {
   type HostMessage,
   type HostReadyContext,
   type ResolveResultPayload,
+  type WidthRequest,
   trackerProviderIdOf,
 } from '@openchamber/sdk';
 import { guestMessageSchema } from '@openchamber/sdk/schemas';
@@ -122,6 +123,8 @@ type PluginPaneProps = {
   block?: { call: GuestBlockCall; entry: string; answer: (text: string) => Promise<void> };
   /** The guest asked for this content height (`setHeight`). The Work Status section and a chat block size their frames from it. */
   onResize?: (height: number) => void;
+  /** The guest asked for this width (`setWidth`). Only a `header` frame has one. */
+  onWidth?: (request: WidthRequest) => void;
   onStatusControls?: (binding: GuestStatusControlBinding | null) => void;
   /** The Work Status panel's own directory; null deliberately means no project. */
   statusDirectory?: string | null;
@@ -192,6 +195,7 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
   onSessionStarted,
   block,
   onResize,
+  onWidth,
   onStatusControls,
   statusDirectory,
   fileEditor,
@@ -279,8 +283,9 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
     const features: NonNullable<HostReadyContext['features']> = {};
     if (guest?.storageId && globalThis.indexedDB) features.deviceStorage = true;
     if (surface === 'status' && onStatusControls) features.statusControls = true;
+    if (surface === 'header' && onWidth) features.headerWidth = true;
     if (!popoverHost && !popover && !headless && !isVSCodeRuntime() && !isMobileSurfaceRuntime()
-      && (surface === 'panel' || surface === 'page' || surface === 'status')) features.popovers = true;
+      && (surface === 'panel' || surface === 'page' || surface === 'status' || surface === 'header')) features.popovers = true;
     // A hidden frame is nobody's panel: it neither takes kept answers nor leaves any.
     if (!headless) features.lateGenerateResults = true;
     return {
@@ -336,7 +341,7 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
     popover: popoverHost?.context ?? popover,
     features,
     };
-  }, [block, connection, currentTheme, pageColors, readableColors, directory, guest?.backgroundEntry, guest?.storageId, headless, item, locale, oauthStatus, onStatusControls, popover, popoverHost, sessionSnapshot, surface]);
+  }, [block, connection, currentTheme, pageColors, readableColors, directory, guest?.backgroundEntry, guest?.storageId, headless, item, locale, oauthStatus, onStatusControls, onWidth, popover, popoverHost, sessionSnapshot, surface]);
 
   const fileEditorEntry = surface === 'file' && fileEditor
     ? guest?.fileEditors?.find((editor) => editor.id === fileEditor.editorId)?.entry ?? null
@@ -345,7 +350,7 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
   const approvedOrigins = guest?.capabilities.granted.includes('origins') ? guest.origins ?? [] : [];
   // New package files reload the frame, except a file editor's: a reload there would drop unsaved edits, so it picks them up on its next open.
   const revision = surface === 'file' ? 0 : guest?.revision ?? 0;
-  const frameKey = `${guestId}:${guest?.storageId ?? ''}:${guest?.version ?? ''}:rev-${revision}:${guestEnabled}:grants-${guest?.capabilities.granted.join(',') ?? ''}:service-${guest?.service?.granted ? '1' : '0'}:origins-${approvedOrigins.join(',')}:${guest?.entry ?? ''}:${guest?.backgroundEntry ?? ''}:${guest?.statusEntry ?? ''}:${guest?.pageEntry ?? ''}:${guest?.attachEntry ?? ''}:${fileEditorEntry ?? ''}:${block?.entry ?? ''}:popover-${popoverHost?.context.id ?? popover?.id ?? ''}`;
+  const frameKey = `${guestId}:${guest?.storageId ?? ''}:${guest?.version ?? ''}:rev-${revision}:${guestEnabled}:grants-${guest?.capabilities.granted.join(',') ?? ''}:service-${guest?.service?.granted ? '1' : '0'}:origins-${approvedOrigins.join(',')}:${guest?.entry ?? ''}:${guest?.backgroundEntry ?? ''}:${guest?.statusEntry ?? ''}:${guest?.pageEntry ?? ''}:${guest?.attachEntry ?? ''}:${guest?.headerEntry ?? ''}:${fileEditorEntry ?? ''}:${block?.entry ?? ''}:popover-${popoverHost?.context.id ?? popover?.id ?? ''}`;
 
   // Scoped auth is minted per mount/version/grant and renewed if an existing
   // iframe navigates after expiry. Healthy documents retain their local state.
@@ -355,6 +360,7 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
     ? headless ? guest.backgroundEntry ?? guest.entry ?? null
       : surface === 'page' ? guest.pageEntry ?? null
         : surface === 'status' ? guest.statusEntry ?? null
+        : surface === 'header' ? guest.headerEntry ?? null
         : surface === 'block' ? block?.entry ?? null
         : surface === 'file' ? fileEditorEntry
         : surface === 'dialog' && guest.attachEntry ? guest.attachEntry : guest.entry ?? null
@@ -401,6 +407,8 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
   blockRef.current = block;
   const onResizeRef = React.useRef(onResize);
   onResizeRef.current = onResize;
+  const onWidthRef = React.useRef(onWidth);
+  onWidthRef.current = onWidth;
   const onStatusControlsRef = React.useRef(onStatusControls);
   onStatusControlsRef.current = onStatusControls;
   const statusControlsRef = React.useRef<ReturnType<typeof createGuestStatusControls> | null>(null);
@@ -575,6 +583,7 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
       statusEntry: candidate?.statusEntry,
       pageEntry: candidate?.pageEntry,
       attachEntry: candidate?.attachEntry,
+      headerEntry: candidate?.headerEntry,
       origins: candidate?.origins ?? [],
       grants: candidate?.capabilities.granted ?? [],
       service: candidate?.service?.granted ?? false,
@@ -925,6 +934,11 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
         resize: (height) => {
           onResizeRef.current?.(height);
         },
+        setWidth: (request) => {
+          const handler = onWidthRef.current;
+          if (!handler) throw new HostRequestError('UNSUPPORTED', 'This frame has no header slot.');
+          handler(request);
+        },
         answerBlock: (text) => {
           const answer = blockRef.current?.answer;
           if (!answer) return Promise.reject(new Error('Only a block in the chat can answer the agent.'));
@@ -946,7 +960,7 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
         },
         openPopover: (request) => {
           if (childPopover || popover || headless || isVSCodeRuntime() || isMobileSurfaceRuntime()
-            || !(surface === 'panel' || surface === 'page' || surface === 'status')) {
+            || !(surface === 'panel' || surface === 'page' || surface === 'status' || surface === 'header')) {
             throw new HostRequestError('UNSUPPORTED', 'This frame cannot open a popover.');
           }
           const frameBounds = iframeRef.current?.getBoundingClientRect();
@@ -1065,8 +1079,8 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
   }, [pushHostState, ready, directory]);
 
   React.useEffect(() => {
-    // A Work Status section or a file editor is not a rail tab and may be the package's only frame.
-    if (headless || surface === 'status' || surface === 'file' || surface === 'popover' || surface === 'block' || catalogStatus !== 'ready' || guest?.entry) {
+    // A Work Status section, a header item or a file editor is not a rail tab and may be the package's only frame.
+    if (headless || surface === 'status' || surface === 'file' || surface === 'popover' || surface === 'block' || surface === 'header' || catalogStatus !== 'ready' || guest?.entry) {
       return;
     }
     closeGuestTabsEverywhere(mode);
@@ -1119,8 +1133,8 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
       style={{ colorScheme: currentTheme.metadata.variant === 'dark' ? 'dark' : 'light' }}
       className={cn(
         'h-full w-full min-h-0 min-w-0 border-0 overflow-hidden',
-        // The attach window and the Work Status card draw their own chrome behind the page.
-        surface === 'dialog' || surface === 'status' || surface === 'popover' || surface === 'block' ? 'bg-transparent' : 'bg-[var(--surface-background)]',
+        // The attach window, the Work Status card and the app header draw their own chrome behind the page.
+        surface === 'dialog' || surface === 'status' || surface === 'popover' || surface === 'block' || surface === 'header' ? 'bg-transparent' : 'bg-[var(--surface-background)]',
       )}
       onLoad={() => {
         if (!popoverHost && !popover) closeActivePopover('owner');

@@ -560,8 +560,10 @@ with `surface: 'popover'`. Folding or hiding the section removes the card with
 its owner; project/runtime and authorization changes also dismiss it. Pointer
 travel into the card and keyboard dismissal are handled by the SDK anchor
 helper and the host overlay controller. This does not increase the status
-frame's 320px height limit. The public contract is in `packages/sdk/API.md`,
-under Anchored popovers.
+frame's 320px height limit. A `header` frame opens the same card with its
+header item as the owner; the card hangs below the header, and the item's
+fixed 28 px height is what its anchor is measured against.
+The public contract is in `packages/sdk/API.md`, under Anchored popovers.
 
 ### Sections the app draws
 

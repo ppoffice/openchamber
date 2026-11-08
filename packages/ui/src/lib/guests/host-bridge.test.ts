@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { HostRequestError, OPENCHAMBER_SDK_CHANNEL, type GuestMessage, type GuestStatusControl, type ResolveResultPayload, type StartSessionRequest, type ToastRequest } from '@openchamber/sdk';
+import { HostRequestError, OPENCHAMBER_SDK_CHANNEL, type GuestMessage, type GuestStatusControl, type ResolveResultPayload, type StartSessionRequest, type ToastRequest, type WidthRequest } from '@openchamber/sdk';
 import type { GuestFileProxyResult, GuestFileRequest } from './files.ts';
 import type { GuestGenerateProxyResult } from './generate.ts';
 
@@ -50,6 +50,7 @@ const effects = (overrides: Partial<BridgeEffects> = {}): BridgeEffects => ({
   generate: overrides.generate ?? (async () => ({ ok: true, result: { text: '' } })),
   setBadge: overrides.setBadge ?? (() => {}),
   resize: overrides.resize ?? (() => {}),
+  setWidth: overrides.setWidth,
   answerBlock: overrides.answerBlock ?? (async () => {}),
   openCommit: overrides.openCommit ?? (async () => ({ ok: true })),
   resolveResult: overrides.resolveResult ?? (() => {}),
@@ -677,10 +678,19 @@ describe('badge and resolve-result', () => {
     expect(reply).toMatchObject({ type: 'result', ok: false, code: 'UNSUPPORTED' });
   });
 
+  test('hands a header width to the pane that sizes the frame', async () => {
+    const seen: WidthRequest[] = [];
+    const reply = await answerGuestMessage({
+      channel: OPENCHAMBER_SDK_CHANNEL, v: 1, type: 'width', id: 'width-call', payload: { preferred: 200, min: 60 },
+    }, effects({ setWidth: (request) => { seen.push(request); } }));
+    expect(seen).toEqual([{ preferred: 200, min: 60 }]);
+    expect(reply).toMatchObject({ type: 'result', id: 'width-call', ok: true });
+  });
+
   test('refuses a header width while no surface sizes frames from it', async () => {
     const reply = await answerGuestMessage({
       channel: OPENCHAMBER_SDK_CHANNEL, v: 1, type: 'width', id: 'width-call', payload: { preferred: 200, min: 60 },
-    }, effects());
+    }, effects({ setWidth: undefined }));
     expect(reply).toMatchObject({ type: 'result', id: 'width-call', ok: false, code: 'UNSUPPORTED' });
   });
 
