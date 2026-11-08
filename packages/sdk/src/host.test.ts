@@ -271,7 +271,7 @@ describe('connectHost', () => {
       ...ready,
       payload: { ...ready.payload, surface: 'header', features: { headerWidth: true } },
     } }));
-    for (const request of [{ preferred: 100, min: 120 }, { preferred: Number.NaN, min: 24 }, { preferred: 100, min: Number.POSITIVE_INFINITY }]) {
+    for (const request of [{ preferred: 100, min: 120 }, { preferred: 10, min: 20 }, { preferred: Number.NaN, min: 24 }, { preferred: 100, min: Number.POSITIVE_INFINITY }]) {
       await expect(host.setWidth(request)).rejects.toMatchObject({ code: 'HOST_REJECTED' });
     }
     expect(frame.posted.map((message) => message.type)).toEqual(['hello']);
