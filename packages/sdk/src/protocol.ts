@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { guestSessionWorktreeSchema, guestStorageRequestSchema, guestStorageResultSchema, guestWorkspaceQuerySchema, guestWorkspaceSnapshotSchema } from './workspace-schemas.ts';
 import { guestStatusControlEventSchema, guestStatusControlsSchema } from './status-control-schemas.ts';
 import { guestPopoverClosedEventSchema, guestPopoverDataSchema, guestPopoverRequestSchema } from './popover-schemas.ts';
+import { guestUsageSnapshotSchema } from './usage-schemas.ts';
 import { GUEST_SHELL_END_STATUSES, GUEST_SHELL_ID_MAX, GUEST_SHELLS_MAX, GUEST_SHELL_OUTPUT_TAIL_MAX } from './shells.ts';
 
 import { OPENCHAMBER_SDK_API_VERSION, OPENCHAMBER_SDK_CHANNEL } from './api-version.ts';
@@ -298,6 +299,7 @@ const readyPayloadSchema = z.object({
     popovers: z.literal(true).optional(),
     lateGenerateResults: z.literal(true).optional(),
     headerWidth: z.literal(true).optional(),
+    usage: z.literal(true).optional(),
   }).optional(),
 });
 
@@ -482,6 +484,11 @@ export const hostMessageSchema = z.union([
     payload: z.object({ version: z.string().max(GUEST_FILE_EDITOR_VERSION_MAX) }),
   }),
   z.object({ ...envelope, type: z.literal('generate-late'), payload: lateGenerateResultSchema }),
+  z.object({
+    ...envelope,
+    type: z.literal('usage'),
+    payload: z.object({ snapshot: guestUsageSnapshotSchema }),
+  }),
 ]);
 
 const filePathSchema = z.string().min(1).max(GUEST_FILE_PATH_MAX).refine(isGuestFilePath);
@@ -510,6 +517,9 @@ export const guestMessageSchema = z.discriminatedUnion('type', [
     id: z.string().min(1),
     payload: z.object({ controls: guestStatusControlsSchema }).strict(),
   }),
+  z.object({ ...envelope, type: z.literal('usage-subscribe'), id: z.string().min(1) }),
+  z.object({ ...envelope, type: z.literal('usage-refresh'), id: z.string().min(1) }),
+  z.object({ ...envelope, type: z.literal('open-usage-settings'), id: z.string().min(1) }),
   z.object({ ...envelope, type: z.literal('popover-open'), id: z.string().min(1), payload: guestPopoverRequestSchema }),
   z.object({ ...envelope, type: z.literal('popover-close'), id: z.string().min(1), payload: z.object({ id: z.string().min(1).max(80), reason: z.enum(['closed', 'escape']).optional() }).strict() }),
   z.object({ ...envelope, type: z.literal('popover-anchor'), id: z.string().min(1), payload: z.object({ id: z.string().min(1).max(80), active: z.boolean() }).strict() }),

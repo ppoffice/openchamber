@@ -844,13 +844,15 @@ export const serviceProvides = (
  * `opencodePlugin` follows from `contributes.opencodePlugin`: the package's
  * plugin runs inside the user's OpenCode. `opencode` follows from the service
  * role of the same name: the service reads sessions, messages, projects and
- * live events from the OpenCode the host uses, and nothing else.
+ * live events from the OpenCode the host uses, and nothing else. `usage` is
+ * declared under `contributes.capabilities`: the frame reads the provider
+ * usage feed (`host.onUsage`) and asks for a refetch or for Settings → Usage.
  */
-export const GUEST_CAPABILITIES = ['prompt', 'sessions', 'files', 'model', 'shells', 'conversation', 'service', 'network', 'filesystem', 'origins', 'transcript', 'sessionControl', 'sessionAnswers', 'instructions', 'skills', 'opencodePlugin', 'opencode'] as const;
+export const GUEST_CAPABILITIES = ['prompt', 'sessions', 'files', 'model', 'shells', 'conversation', 'service', 'network', 'filesystem', 'origins', 'transcript', 'sessionControl', 'sessionAnswers', 'instructions', 'skills', 'opencodePlugin', 'opencode', 'usage'] as const;
 
 export type GuestCapability = (typeof GUEST_CAPABILITIES)[number];
 
-export const DECLARED_GUEST_CAPABILITIES = ['prompt', 'sessions', 'files', 'model', 'shells'] as const;
+export const DECLARED_GUEST_CAPABILITIES = ['prompt', 'sessions', 'files', 'model', 'shells', 'usage'] as const;
 
 /** The capabilities a manifest may ask for directly. */
 export type DeclaredGuestCapability = (typeof DECLARED_GUEST_CAPABILITIES)[number];

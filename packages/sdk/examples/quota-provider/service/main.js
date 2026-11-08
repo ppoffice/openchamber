@@ -59,6 +59,12 @@ function installGuestScrollbarActivity(doc) {
   }, { capture: true, passive: true });
 }
 var GUEST_SCROLLBAR_SCRIPT = `(${installGuestScrollbarActivity.toString()})(document);`;
+// packages/sdk/src/usage.ts
+var GUEST_USAGE_ICON_MAX = 64 * 1024;
+var GUEST_USAGE_DISPLAY_MODES = ["usage", "remaining"];
+var GUEST_USAGE_TONES = ["default", "warning", "error"];
+var USAGE_TONES = new Set(GUEST_USAGE_TONES);
+var USAGE_DISPLAY_MODES = new Set(GUEST_USAGE_DISPLAY_MODES);
 // packages/sdk/src/manifest.ts
 var TRACKER_URL_TOKENS = ["{id}", "{segment}", "{segments+}"];
 var TRACKER_URL_TOKEN_SET = new Set(TRACKER_URL_TOKENS);
@@ -113,6 +119,7 @@ var fileStatKindSet = new Set(GUEST_FILE_STAT_KINDS);
 var HOST_PUSH_TYPES = new Set([
   "workspace",
   "shells",
+  "usage",
   "ready",
   "directory",
   "session",
