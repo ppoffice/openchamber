@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { GuestPopoverController, positionGuestPopover } from './popovers.ts';
+import { GuestPopoverController, guestPopoverSide, positionGuestPopover } from './popovers.ts';
 
 describe('positionGuestPopover', () => {
   test('translates an anchor through a scaled iframe and keeps the panel inside the viewport', () => {
@@ -38,6 +38,25 @@ describe('positionGuestPopover', () => {
       height: 80,
       side: 'left',
     })).toBeNull();
+  });
+
+  test('hangs a header popover below its 28px strip and clear of the tabs row', () => {
+    const frame = { left: 100, top: 10, width: 152, height: 28, clientWidth: 152, clientHeight: 28 };
+    const positioned = positionGuestPopover({
+      anchor: { x: 0, y: 0, width: 152, height: 28 },
+      frame,
+      viewport: { width: 1400, height: 900 },
+      width: 260,
+      height: 190,
+      side: guestPopoverSide(undefined, 'header'),
+    });
+
+    expect(positioned).toMatchObject({ side: 'bottom', top: 44 });
+    if (!positioned) throw new Error('Header popover was not positioned');
+    // The item ends at 38; the card starts below it, over the header's last 4 px.
+    expect(positioned.top).toBeGreaterThan(frame.top + frame.height);
+    expect(guestPopoverSide('top', 'header')).toBe('top');
+    expect(guestPopoverSide(undefined, 'status')).toBeUndefined();
   });
 });
 

@@ -50,6 +50,7 @@ import { isSpaceDirectory } from '@/lib/spaces/space-route';
 import { HeaderSessionArchiveMenuItem } from './HeaderSessionArchiveMenuItem';
 import { HeaderSessionMarkDoneMenuItem } from './HeaderSessionMarkDoneMenuItem';
 import { HeaderContextUsage } from './HeaderContextUsage';
+import { HeaderExtensionItems } from './HeaderExtensionItems';
 import { HeaderProjectControls } from './HeaderProjectControls';
 import { canUseElectronDesktopIPC, getMiniChatRuntimeArgs, invokeDesktop, isDesktopShell, isVSCodeRuntime, startDesktopWindowDrag } from '@/lib/desktop';
 import { Icon } from "@/components/icon/Icon";
@@ -1233,7 +1234,7 @@ export const Header: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="flex h-full min-w-0 flex-1 items-center gap-0.5 text-start">
+          <div className="flex h-full min-w-0 flex-auto items-center gap-0.5 text-start">
             {/* No session switcher here: with the sidebar closed the tabs are
                 the switcher, and a history button beside them said it twice. */}
             <SessionTabsStrip
@@ -1294,6 +1295,10 @@ export const Header: React.FC = () => {
         )}
 
         {activeSurfaceHeader || isVSCode || !sessionTabsEnabled ? <div className="flex-1" /> : null}
+
+        {/* Extension strips sit between the session tabs and the ring, and
+            give way to the tabs before they give way to each other. */}
+        {!isVSCode && !activeSurfaceHeader ? <HeaderExtensionItems /> : null}
 
         {/* Spacing comes from the gap only, so whichever control ends up last
             sits on the header's own right padding with no trailing margin. */}

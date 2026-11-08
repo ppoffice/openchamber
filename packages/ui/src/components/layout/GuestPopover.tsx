@@ -107,7 +107,7 @@ export const GuestPopover: React.FC<GuestPopoverProps> = ({ position, focused, l
       role="dialog"
       aria-modal={false}
       aria-label={label}
-      className="fixed z-[100]"
+      className="app-region-no-drag fixed z-[100]"
       style={{ left: position.left, top: position.top, width: position.width, height: position.height }}
       onPointerEnter={() => { pointerInsideRef.current = true; reportActivity(); }}
       onPointerLeave={() => { pointerInsideRef.current = false; reportActivity(); }}

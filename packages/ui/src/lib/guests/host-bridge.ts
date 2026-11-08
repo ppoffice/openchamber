@@ -36,6 +36,7 @@ import {
   type SessionSnapshot,
   type StartSessionResult,
   type ToastRequest,
+  type WidthRequest,
 } from '@openchamber/sdk';
 
 import type { GuestFileProxyResult, GuestFileRequest } from '@/lib/guests/files';
@@ -96,6 +97,8 @@ type HostBridgeEffects = {
   openCommit: (sha: string) => Promise<GuestOpenCommitResult>;
   /** Content height the guest asked for; only the Work Status section sizes its frame from it. */
   resize: (height: number) => void;
+  /** Width a `header` frame asked for; a host without a header slot leaves it out and answers `UNSUPPORTED`. */
+  setWidth?: (request: WidthRequest) => void;
   /** A `block` frame answers the agent; a rejection carries what to tell the frame. */
   answerBlock: (text: string) => Promise<void>;
   /** The guest answered a host `resolve` with this id. Not a request, so no `result` goes back. */
@@ -410,9 +413,10 @@ export const answerGuestMessage = async (
     case 'resize':
       effects.resize(message.payload.height);
       return okResult(message.id);
-    // No surface sizes its frame from a width yet, and `ready` does not advertise `headerWidth`.
     case 'width':
-      return errorResult(message.id, 'This host does not size header frames.', 'UNSUPPORTED');
+      if (!effects.setWidth) return errorResult(message.id, 'This host does not size header frames.', 'UNSUPPORTED');
+      effects.setWidth(message.payload);
+      return okResult(message.id);
     case 'resolve-result':
       effects.resolveResult(message.id, message.payload);
       return null;
