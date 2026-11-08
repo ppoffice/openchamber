@@ -321,6 +321,27 @@ describe('connectHost', () => {
     host.dispose();
   });
 
+  test('re-subscribes on every ready and drops the previous snapshot', () => {
+    const frame = createFrame();
+    const host = connectHost({ target: frame, acceptSource: () => true });
+    frame.dispatch(new MessageEvent('message', { data: usageReady() }));
+    const first: GuestUsageSnapshot[] = [];
+    const removeFirst = host.onUsage((snapshot) => first.push(snapshot));
+    expect(frame.posted.filter((message) => message.type === 'usage-subscribe')).toHaveLength(1);
+
+    frame.dispatch(new MessageEvent('message', { data: { channel: OPENCHAMBER_SDK_CHANNEL, v: 1, type: 'usage', payload: { snapshot: usageSnapshot } } }));
+    expect(first).toEqual([usageSnapshot]);
+
+    frame.dispatch(new MessageEvent('message', { data: usageReady() }));
+    expect(frame.posted.filter((message) => message.type === 'usage-subscribe')).toHaveLength(2);
+    const late: GuestUsageSnapshot[] = [];
+    const removeLate = host.onUsage((snapshot) => late.push(snapshot));
+    expect(late).toEqual([]);
+    removeFirst();
+    removeLate();
+    host.dispose();
+  });
+
   test('refreshUsage and openUsageSettings post after the feature is advertised and pass a refusal through', async () => {
     const frame = createFrame();
     const host = connectHost({ target: frame, acceptSource: () => true });

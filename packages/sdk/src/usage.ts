@@ -19,7 +19,7 @@ export const GUEST_USAGE_ID_MAX = 80;
 export const GUEST_USAGE_LABEL_MAX = 120;
 /** Characters of a provider status line. */
 export const GUEST_USAGE_STATUS_MAX = 500;
-/** Bytes of a provider icon's `data:` URL. */
+/** Characters of a provider icon's `data:` URL. */
 export const GUEST_USAGE_ICON_MAX = 64 * 1024;
 
 export const GUEST_USAGE_DISPLAY_MODES = ['usage', 'remaining'] as const;
@@ -54,7 +54,7 @@ export type GuestUsageModel = {
 export type GuestUsageProvider = {
   id: string;
   name: string;
-  /** A `data:image/svg+xml` or `data:image/png` URL, at most `GUEST_USAGE_ICON_MAX` bytes. */
+  /** A `data:image/svg+xml` or `data:image/png` URL, at most `GUEST_USAGE_ICON_MAX` characters. */
   icon: string | null;
   /** The last read succeeded. */
   ok: boolean;
@@ -116,6 +116,7 @@ type UsageSnapshotWire = { displayMode?: unknown; updatedAt?: unknown; loading?:
 type UsageWireValue = UsageSnapshotWire[keyof UsageSnapshotWire];
 
 const USAGE_TONES: ReadonlySet<string> = new Set(GUEST_USAGE_TONES);
+const USAGE_DISPLAY_MODES: ReadonlySet<string> = new Set(GUEST_USAGE_DISPLAY_MODES);
 
 const isText = (value: UsageWireValue, maximum: number, minimum = 1): value is string => {
   const text = String(value);
@@ -136,12 +137,17 @@ const isPercent = (value: UsageWireValue): value is number | null => {
 const isTimestamp = (value: UsageWireValue): value is number | null => {
   if (value === null) return true;
   const time = Number(value);
-  return time === value && Number.isInteger(time) && time >= 0;
+  return time === value && Number.isSafeInteger(time) && time >= 0;
 };
 
 const isTone = (value: UsageWireValue): value is GuestUsageTone => {
   const tone = String(value);
   return tone === value && USAGE_TONES.has(tone);
+};
+
+const isDisplayMode = (value: UsageWireValue): value is GuestUsageDisplayMode => {
+  const mode = String(value);
+  return mode === value && USAGE_DISPLAY_MODES.has(mode);
 };
 
 const readWindows = (value: UsageWireValue): GuestUsageWindow[] | null => {
@@ -210,7 +216,7 @@ export const readGuestUsageSnapshot = (value: UsageSnapshotWire | null | undefin
   if (Object(value) !== value || value === null || value === undefined) return null;
   const wire = value;
   const { displayMode, updatedAt, loading, providers } = wire;
-  if (displayMode !== 'usage' && displayMode !== 'remaining') return null;
+  if (!isDisplayMode(displayMode)) return null;
   if (!isTimestamp(updatedAt) || (loading !== true && loading !== false)) return null;
   if (!Array.isArray(providers) || providers.length > GUEST_USAGE_PROVIDERS_MAX) return null;
   const parsed: GuestUsageProvider[] = [];
