@@ -235,6 +235,12 @@ Writes are atomic: OpenChamber writes a temporary file and renames it, so a read
 
 Your page sees `ctx.surface` as `status`. OpenChamber loads it only while the Work Status panel is visible and your section is expanded, and unloads it when the user collapses the section, so keep nothing there you can't rebuild. A section-only extension can use capabilities, a service, an integration, files, and a page with its own `entry`, but not `page: true`, `attach`, `actions`, or `commands`. The section shows on web, desktop, and in the phone's Work status tab, where it needs no opt-in and gets the phone's width. The `git-graph-status` example is a complete section.
 
+## A strip in the app header
+
+`contributes.headerItem: { "entry": "header/index.html" }` adds a page left of the context ring without a rail panel. `ctx.surface` is `header`, with 28 px height. Once `ready.features.headerWidth` is true, call `host.setWidth({ preferred: 160, min: 64 })`. Both values round up and clamp to 24..480 px. The host honours `min` up to 160 px so the session tabs keep their width first; read the result from `window.innerWidth`. Header items show on web and desktop outside full-page surfaces, and are absent in VS Code and mobile. With `ready.features.popovers`, their popovers default below the strip.
+
+Declare `capabilities: ["usage"]` to read provider usage through `host.onUsage(listener)` when `ready.features.usage` is true. `host.refreshUsage()` refetches with a 15-second cooldown; `host.openUsageSettings()` opens Settings → Usage. Both answer `UNSUPPORTED` without the feature and `NOT_GRANTED` without approval. The feed excludes account/plan labels, console budgets, gift-reset ids, credentials and provider error text. See [Provider usage](https://github.com/openchamber/openchamber/blob/main/packages/sdk/API.md#provider-usage) for snapshot fields and icon handling.
+
 ## An editor for your file type
 
 `contributes.fileEditors` opens files in your page instead of the text editor. When the user opens a matching file in Files, OpenChamber shows your editor there, with the same source toggle, fullscreen button, and save button the built-in viewers have.

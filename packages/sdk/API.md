@@ -298,6 +298,18 @@ When the user activates a control, the app posts `{ "id": "stop-web" }` to the s
 
 Keep `entry` beside `source` to support OpenChamber versions that predate it: they ignore `source` and load the frame. Web and desktop only, like every status section.
 
+### Header items
+
+`contributes.headerItem: { entry }` mounts package-local `.html` with built scripts as a 28 px strip left of the context ring. It needs no `panel.entry`; `page: true`, `attach`, `actions` and `commands` still need a panel or background entry. A page with its own entry can coexist. Header items mount on web and desktop outside full-page surfaces. VS Code and mobile mount none. `ready.surface` is `header`.
+
+`setWidth({ preferred, min }): Promise<void>` requires `ready.features.headerWidth`. Values round up and clamp to 24..480. Raw `min > preferred` or non-numbers are `HOST_REJECTED`; a host without the feature answers `UNSUPPORTED`. The host may give less than `preferred` and honours `min` only up to 160 px, so session tabs keep their width first. Read the allocated width from `window.innerWidth`. Header frames advertise `popovers` and default to side `bottom`.
+
+### Provider usage
+
+Declare capability `usage` for `onUsage(listener): () => void`, `refreshUsage(): Promise<void>` and `openUsageSettings(): Promise<void>`. The host advertises `ready.features.usage` on web and desktop; VS Code and mobile answer `UNSUPPORTED`. The host checks the grant before subscribing, refreshing or opening Settings → Usage, and answers `NOT_GRANTED` without it. Refresh shares an in-flight read and a read within 15 seconds answers without fetching. A mounted subscription counts as a visible readout for the three-minute refresh.
+
+`onUsage` replays the current `GuestUsageSnapshot` to late listeners and subscribes again on every `ready`. The snapshot has `displayMode` (`usage` or `remaining`), `updatedAt`, `loading`, and up to 64 providers in app order with `id`, `name`, `icon`, `ok`, `configured`, `status`, `shown`, `windows` and `models`. `shown` follows the Work Status list. Windows carry `key`, `label`, `usedPercent`, `remainingPercent`, `resetAt`, `resetLabel`, `valueLabel` and `tone` (`default`, `warning`, `error`, from used 50 and 80). Round the unrounded percentages as Work Status does. Built-in labels/values follow Work Status; extension provider free text is never forwarded. Account and plan labels, console budgets, gift-reset ids, credentials and raw errors never cross. Icons are monochrome `data:image/svg+xml` marks or `null`; invert them in dark mode. The feed does not use custom provider-logo overrides.
+
 ### File editors
 
 `contributes.fileEditors` lists up to 8 editors: `{ id: 'canvas', title: 'Excalidraw', match: ['*.excalidraw', '*.excalidraw.md'], entry: 'editor/index.html' }`. `match` holds 1 to 16 file-name patterns, compared case-insensitively with the name only (no `/`); `*` is any run of characters, `?` one, and a pattern must have at least one character that is not a wildcard. `entry` is package `.html` with built scripts, checked at install. `content` is `"text"` (the default) or `"binary"`: a text editor claims only text files and gets the text with `\n` line endings (the host restores the file's own on write); a binary editor claims any matching file, gets its bytes as a `Uint8Array`, returns bytes, and has no source view, and the host saves its unsaved changes before it moves to or from fullscreen. When the user opens a matching file in Files, the viewer loads your page instead of its own preview; the first enabled, approved extension in the list wins, ahead of the built-in viewers. `ctx.surface` is `file`. The phone's Files tab opens your editor too, without an opt-in, at the phone's width.

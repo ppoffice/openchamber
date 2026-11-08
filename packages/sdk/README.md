@@ -226,6 +226,24 @@ host.onItem((item) => {
 
 Every method, its limits, and the error codes are on the [Host API](https://docs.openchamber.dev/sdk/host/) page.
 
+## A strip in the app header
+
+`contributes.headerItem: { "entry": "header/index.html" }` mounts a page in the app header, left of the context ring. It is a frame of its own like a status section, so it needs no `panel.entry`. `ctx.surface` is `"header"` and the host fixes the height at 28 px. Items show on web and desktop, never on full-page surfaces, in VS Code, or on mobile.
+
+```ts
+await host.setWidth({ preferred: 160, min: 64 });
+```
+
+Both values are rounded up and held between 24 and 480 px. The host may give less than `preferred`, and it treats `min` as a floor only up to 160 px. The session tabs keep their width first, the strip shrinks, and only then do the tabs scroll. The page reads the result from `window.innerWidth`. Wait for `ready.features.headerWidth` before calling `setWidth`; a host without it answers `UNSUPPORTED`. With `ready.features.popovers`, a header frame opens its card below the strip when the request names no side.
+
+## Provider usage
+
+Add `usage` to `contributes.capabilities` for the provider usage the app already reads. When `ready.features.usage` is true, `host.onUsage(listener)` receives a snapshot on every change and replays the last one to a listener that registers later. `host.refreshUsage()` asks the host to read the providers again and resolves when the read settled; a refresh within 15 seconds of the last read answers without fetching. `host.openUsageSettings()` opens Settings → Usage. Both calls reject `UNSUPPORTED` without the feature and `NOT_GRANTED` without the grant. A mounted, subscribed frame counts as a visible readout for the app's three-minute refresh.
+
+The snapshot carries `displayMode`, `updatedAt`, `loading`, and every configured provider in app order. A provider has `id`, `name`, `icon`, `ok`, `configured`, `status`, `shown`, `windows` and `models`; `shown` says it is in the user's Work Status list. A window has `key`, `label`, `usedPercent`, `remainingPercent`, `resetAt`, `resetLabel`, `valueLabel` and a `tone` of `default`, `warning` or `error` at 50 and 80 percent used. Round percentages for display as Work Status does. Built-in labels and values follow Work Status; extension providers' free text is never forwarded. Account and plan labels, console budgets, gift-reset ids, credentials and provider error text never cross.
+
+`icon` is a `data:image/svg+xml` URL with the provider's monochrome mark on a transparent background, or `null`; draw the provider's initial then. Invert the SVG in dark mode. The feed uses bundled or models.dev marks and extension quota-provider icons; custom provider-logo overrides are not used.
+
 ## Popovers outside the extension frame
 
 When `ready.features.popovers` is true, `host.openPopover` can show a bounded card outside your iframe. The host loads the same package entry in a second sandboxed frame, with `ready.surface === 'popover'` and `ready.popover.data` carrying your JSON. Branch on that surface before mounting your normal page. The popover has the same approved capabilities as your extension.
