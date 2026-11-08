@@ -10,16 +10,25 @@ import { clampHeaderItemWidth, type WidthRequest } from '@openchamber/sdk';
  */
 export const HEADER_ITEM_FLEX_SHRINK = 1000;
 
+/**
+ * Most width a header item may keep against the session tabs, in CSS px. A
+ * guest can ask for a larger minimum, and the host honours this cap instead:
+ * the tabs win, and no strip holds more than 160 px while they are short of
+ * room.
+ */
+export const HEADER_ITEM_MIN_WIDTH_CAP = 160;
+
 type GuestHeaderItemSize = { preferred: number; min: number };
 
 /**
  * The width a guest asked for, inside the SDK range, with `min` never above
- * `preferred`. `null` before the first request, when the item holds no width.
+ * `preferred` and never above `HEADER_ITEM_MIN_WIDTH_CAP`. `null` before the
+ * first request, when the item holds no width.
  */
 export const readHeaderItemSize = (request: WidthRequest | null): GuestHeaderItemSize | null => {
   if (!request) return null;
   const preferred = clampHeaderItemWidth(request.preferred);
-  return { preferred, min: Math.min(preferred, clampHeaderItemWidth(request.min)) };
+  return { preferred, min: Math.min(preferred, clampHeaderItemWidth(request.min), HEADER_ITEM_MIN_WIDTH_CAP) };
 };
 
 type HeaderItemFlexStyle = {

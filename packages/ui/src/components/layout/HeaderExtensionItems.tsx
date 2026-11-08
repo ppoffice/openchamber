@@ -8,8 +8,16 @@ import type { InstalledGuest } from '@/lib/guests/types';
 import { pluginModeFromId } from '@/lib/surfaces/modes';
 import { cn } from '@/lib/utils';
 
-// Most headers carry no extension strip; only a package that ships one pays for the pane's code.
+// PluginPane is already in the main chunk through MainLayout; the boundary
+// only lets the header commit its row before the frame renders.
 const PluginPane = React.lazy(() => import('./PluginPane').then((module) => ({ default: module.PluginPane })));
+
+/**
+ * Last width each header item asked for, for this app session. A full-page
+ * surface unmounts the header; returning starts from the width the item had
+ * instead of collapsing it to zero and shifting the tabs.
+ */
+const rememberedWidths = new Map<string, WidthRequest>();
 
 /**
  * One guest's strip in the header. The frame starts at no width, so nothing
@@ -18,18 +26,20 @@ const PluginPane = React.lazy(() => import('./PluginPane').then((module) => ({ d
  * while the session tabs keep their width. The height belongs to the header.
  */
 const HeaderExtensionItem: React.FC<{ guest: InstalledGuest }> = ({ guest }) => {
-  const [width, setWidth] = React.useState<WidthRequest | null>(null);
-  const handleWidth = React.useCallback((request: WidthRequest) => setWidth(request), []);
+  const [width, setWidth] = React.useState<WidthRequest | null>(() => rememberedWidths.get(guest.id) ?? null);
+  const handleWidth = React.useCallback((request: WidthRequest) => {
+    rememberedWidths.set(guest.id, request);
+    setWidth(request);
+  }, [guest.id]);
   const style = React.useMemo(() => headerItemFlexStyle(width), [width]);
 
   return (
     <div
       data-guest-header-item={guest.id}
-      // The header row is a window drag area; the strip takes the pointer.
-      className={cn('app-region-no-drag flex h-full min-w-0 items-center', width && 'me-2')}
+      className={cn('flex h-full min-w-0 items-center', width && 'me-2')}
       style={style}
     >
-      <div className="w-full overflow-hidden" style={{ height: GUEST_HEADER_ITEM_HEIGHT }}>
+      <div className="app-region-no-drag w-full overflow-hidden" style={{ height: GUEST_HEADER_ITEM_HEIGHT }}>
         <ErrorBoundary fallback={null}>
           <React.Suspense fallback={null}>
             <PluginPane

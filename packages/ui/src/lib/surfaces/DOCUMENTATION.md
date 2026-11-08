@@ -162,11 +162,17 @@ active guest with `surface="header"` in `Header.tsx`, left of the context ring:
 the same sandbox, guest-scoped token, grants and pause gates as a rail panel.
 The header fixes the frame at `GUEST_HEADER_ITEM_HEIGHT` (28 px); the guest
 asks for a width with `setWidth` and sees the width it got as its own viewport,
-so it hides what does not fit. The strip appears in neither VS Code nor mobile,
+so it hides what does not fit. The guest names a preferred width and a
+minimum; the host honours the minimum only up to
+`HEADER_ITEM_MIN_WIDTH_CAP` (160 px), so no strip keeps more than 160 px
+against the session tabs. The strip appears in neither VS Code nor mobile,
 which load no guests, and it is hidden while a full-page surface owns the
-header. A header frame may open the same sandboxed anchored popover a Work
-Status section does, with its header item as the owner; the card opens below
-the header.
+header. Coming back from a full-page surface starts at the width the item last
+asked for, so the tabs do not shift while it reports again. A header frame may
+open the same sandboxed anchored popover a Work Status section does, with its
+header item as the owner; when the guest names no side the host opens the card
+below the strip (`guestPopoverSide`), and the overlay is an `app-region-no-drag`
+area.
 
 ### Why the session tabs keep their width before a header item shrinks
 
@@ -179,7 +185,9 @@ first and stops at the minimum its guest named; that minimum violation freezes
 the item, and the remaining shrink lands on the tabs row, which scrolls its
 tabs. With one shrink factor both would lose width together, proportional to
 their bases, and the strip would take from the tabs from the first pixel that
-goes missing.
+goes missing. The minimum a guest asks to keep is honoured only up to 160 px
+(`HEADER_ITEM_MIN_WIDTH_CAP`): past that the tabs still win, whatever the
+guest names.
 
 ## Adding a surface
 

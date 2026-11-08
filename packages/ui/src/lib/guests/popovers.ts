@@ -1,4 +1,4 @@
-import type { GuestPopoverRequest, GuestPopoverSide } from '@openchamber/sdk';
+import type { GuestHostSurface, GuestPopoverRequest, GuestPopoverSide } from '@openchamber/sdk';
 
 type GuestPopoverFrameBounds = {
   left: number;
@@ -81,6 +81,16 @@ export const getGuestPopoverController = (ownerDocument: Document): GuestPopover
 };
 
 const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
+
+/**
+ * A header frame hangs its card below its own strip when the guest names no
+ * side; the strip sits on the top edge, where a left popover would cover the
+ * session tabs. Every other surface keeps the request's choice.
+ */
+export const guestPopoverSide = (
+  side: GuestPopoverSide | undefined,
+  surface: GuestHostSurface,
+): GuestPopoverSide | undefined => side ?? (surface === 'header' ? 'bottom' : undefined);
 
 /** Converts an owner-frame CSS-pixel anchor into a host viewport position. */
 export const positionGuestPopover = (request: PopoverPositionRequest): GuestPopoverPosition | null => {

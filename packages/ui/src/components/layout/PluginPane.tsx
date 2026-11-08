@@ -29,6 +29,7 @@ import { getReadableThemeColors } from '@/lib/theme/readableColors';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/icon/Icon';
 import { useI18n } from '@/lib/i18n';
 import { subscribeOpenchamberEvents } from '@/lib/openchamberEvents';
 import {
@@ -83,7 +84,7 @@ import { useGuestsStore } from '@/lib/guests/store';
 import { readGuestWorkspace, observeGuestWorkspace, openGuestSession } from '@/lib/guests/workspace';
 import { observeGuestShells, readGuestShellOutput } from '@/lib/guests/shells';
 import { guestStorageOperation } from '@/lib/guests/storage';
-import { getGuestPopoverController, guestPopoverOwnerBlocked, positionGuestPopover, type GuestPopoverActivation, type GuestPopoverPosition } from '@/lib/guests/popovers';
+import { getGuestPopoverController, guestPopoverOwnerBlocked, guestPopoverSide, positionGuestPopover, type GuestPopoverActivation, type GuestPopoverPosition } from '@/lib/guests/popovers';
 import { createGuestStatusControls, type GuestStatusControlBinding } from '@/lib/guests/status-controls';
 import { showGuestToast } from '@/lib/guests/toast';
 import { getRuntimeKey, subscribeRuntimeEndpointChanged } from '@/lib/runtime-switch';
@@ -918,7 +919,9 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
           );
         },
         setBadge: (count) => {
-          if (!guestEnabledRef.current) return;
+          // A header strip has no rail icon of its own; a badge would land on
+          // the package's panel without the user opening it.
+          if (!guestEnabledRef.current || surface === 'header') return;
           useGuestBadgeStore.getState().setBadge(guestIdRef.current, count);
         },
         openCommit: (sha) => {
@@ -977,7 +980,7 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
             anchor: request.anchor,
             width: request.width,
             height: request.height,
-            side: request.side,
+            side: guestPopoverSide(request.side, surface),
             frame: {
               left: frameBounds.left, top: frameBounds.top, width: frameBounds.width, height: frameBounds.height,
               clientWidth: frame.clientWidth, clientHeight: frame.clientHeight,
@@ -1104,6 +1107,22 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
   }
 
   if (!guest || (!src && !srcDoc)) {
+    // A header strip is 28 px high and has no room for the failure sentence;
+    // once the frame fails, an icon-only retry is the only action it offers.
+    if (surface === 'header') {
+      if (!guest || frameStatus !== 'error') return null;
+      return (
+        <button
+          type="button"
+          aria-label={t('terminalView.actions.tryAgain')}
+          title={t('terminalView.actions.tryAgain')}
+          onClick={retryFrame}
+          className="app-region-no-drag inline-flex h-full w-full items-center justify-center text-muted-foreground hover:text-foreground"
+        >
+          <Icon name="refresh" className="size-3.5" />
+        </button>
+      );
+    }
     return (
       <div className="flex h-full items-center justify-center gap-3 px-6 text-sm text-muted-foreground">
         {guest && frameStatus === 'loading'
@@ -1197,6 +1216,7 @@ export const PluginPane: React.FC<PluginPaneProps> = ({
               const request = { ...current.request, height: nextHeight };
               const position = positionGuestPopover({
                 ...request,
+                side: guestPopoverSide(request.side, surface),
                 frame: { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height,
                   clientWidth: frame.clientWidth, clientHeight: frame.clientHeight },
                 viewport: { width: window.innerWidth, height: window.innerHeight },

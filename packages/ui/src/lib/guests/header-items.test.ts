@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { GUEST_HEADER_ITEM_WIDTH_MAX, GUEST_HEADER_ITEM_WIDTH_MIN } from '@openchamber/sdk';
 
-import { HEADER_ITEM_FLEX_SHRINK, headerItemFlexStyle, readHeaderItemSize } from './header-items.ts';
+import { HEADER_ITEM_FLEX_SHRINK, HEADER_ITEM_MIN_WIDTH_CAP, headerItemFlexStyle, readHeaderItemSize } from './header-items.ts';
 
 describe('header item sizing', () => {
   test('holds no width before the guest asks for one', () => {
@@ -28,5 +28,10 @@ describe('header item sizing', () => {
     // A raw frame message can carry min above preferred; the schema refuses it,
     // and the sizing stays sane if one ever reaches here.
     expect(readHeaderItemSize({ preferred: 40, min: 300 })).toEqual({ preferred: 40, min: 40 });
+  });
+
+  test('honours at most 160px of minimum so the tabs keep their room', () => {
+    expect(readHeaderItemSize({ preferred: 480, min: 300 })).toEqual({ preferred: 480, min: HEADER_ITEM_MIN_WIDTH_CAP });
+    expect(headerItemFlexStyle({ preferred: 480, min: 300 })).toMatchObject({ flexBasis: '480px', minWidth: '160px' });
   });
 });
