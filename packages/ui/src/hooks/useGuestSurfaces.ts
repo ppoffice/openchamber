@@ -79,6 +79,7 @@ export const usePhoneGuestPanelModes = (): PluginContextPanelMode[] => {
 };
 
 const EMPTY_STATUS_SECTIONS: InstalledGuest[] = [];
+const EMPTY_HEADER_ITEMS: InstalledGuest[] = [];
 
 /**
  * Active guests that contribute a Work Status section: the desktop panel and
@@ -92,6 +93,20 @@ export const useGuestStatusSections = (): InstalledGuest[] => {
     if (isVSCodeRuntime()) return EMPTY_STATUS_SECTIONS;
     const sections = guests.filter((guest) => (guest.statusEntry || guest.statusSource) && isGuestActive(guest));
     return sections.length > 0 ? sections : EMPTY_STATUS_SECTIONS;
+  }, [guests]);
+};
+
+/**
+ * Active guests that contribute a strip in the app header. Empty on VS Code
+ * and mobile. Reads the store only; the rail owns
+ * loading the catalog. Catalog order is the header order.
+ */
+export const useGuestHeaderItems = (): InstalledGuest[] => {
+  const guests = useGuestsStore((state) => state.guests);
+  return React.useMemo(() => {
+    if (isVSCodeRuntime() || isMobileSurfaceRuntime()) return EMPTY_HEADER_ITEMS;
+    const items = guests.filter((guest) => guest.headerEntry && isGuestActive(guest));
+    return items.length > 0 ? items : EMPTY_HEADER_ITEMS;
   }, [guests]);
 };
 
