@@ -244,6 +244,40 @@ describe('connectHost', () => {
     host.dispose();
   });
 
+  test('asks for a header width only on hosts that size header frames', async () => {
+    const frame = createFrame();
+    const host = connectHost({ target: frame, acceptSource: () => true });
+    await expect(host.setWidth({ preferred: 200, min: 60 })).rejects.toMatchObject({ code: 'UNSUPPORTED' });
+    expect(frame.posted.map((message) => message.type)).toEqual(['hello']);
+    frame.dispatch(new MessageEvent('message', { data: {
+      ...ready,
+      payload: { ...ready.payload, surface: 'header', features: { headerWidth: true } },
+    } }));
+    const pending = host.setWidth({ preferred: 199.2, min: 10 });
+    const request = frame.posted.at(-1);
+    if (!request || request.type !== 'width') throw new Error('Expected width request');
+    expect(request.payload).toEqual({ preferred: 200, min: 24 });
+    frame.dispatch(new MessageEvent('message', { data: { channel: OPENCHAMBER_SDK_CHANNEL, v: 1, type: 'result', id: request.id, ok: true } }));
+    await expect(pending).resolves.toBeUndefined();
+    void host.setWidth({ preferred: 5000, min: 5000 }).catch(() => undefined);
+    expect(frame.posted.at(-1)).toMatchObject({ type: 'width', payload: { preferred: 480, min: 480 } });
+    host.dispose();
+  });
+
+  test('rejects an invalid header width locally without posting', async () => {
+    const frame = createFrame();
+    const host = connectHost({ target: frame, acceptSource: () => true });
+    frame.dispatch(new MessageEvent('message', { data: {
+      ...ready,
+      payload: { ...ready.payload, surface: 'header', features: { headerWidth: true } },
+    } }));
+    for (const request of [{ preferred: 100, min: 120 }, { preferred: 10, min: 20 }, { preferred: Number.NaN, min: 24 }, { preferred: 100, min: Number.POSITIVE_INFINITY }]) {
+      await expect(host.setWidth(request)).rejects.toMatchObject({ code: 'HOST_REJECTED' });
+    }
+    expect(frame.posted.map((message) => message.type)).toEqual(['hello']);
+    host.dispose();
+  });
+
   const action: HostMessage = {
     channel: OPENCHAMBER_SDK_CHANNEL, v: 1, type: 'action', id: 'action-1',
     payload: { kind: 'message', action: 'count', sessionId: 's1', sessionTitle: 'Session', directory: '/repo', messageId: 'm1', role: 'assistant', text: 'Hello' },
