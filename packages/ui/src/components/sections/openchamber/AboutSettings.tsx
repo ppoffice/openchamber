@@ -175,7 +175,8 @@ type AboutSettingsProps = {
 
 export const AboutSettings: React.FC<AboutSettingsProps> = ({ initialUpdateDialogOpen = false }) => {
   const { t } = useI18n();
-  const updatesDisabled = import.meta.env.VITE_OPENCHAMBER_FORK === '1';
+  const productName = import.meta.env.VITE_OPENCHAMBER_FORK === '1' ? 'OpenChamber Fork' : 'OpenChamber';
+  const updatesDisabled = import.meta.env.VITE_OPENCHAMBER_FORK === '1' || import.meta.env.VITE_OPENCHAMBER_UPDATES_DISABLED === '1';
   const [updateDialogOpen, setUpdateDialogOpen] = React.useState(initialUpdateDialogOpen);
   const [showChecking, setShowChecking] = React.useState(false);
   const [openChamberVersion, setOpenChamberVersion] = React.useState<string | null>(null);
@@ -599,7 +600,7 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({ initialUpdateDialo
       <div className="w-full space-y-6 pb-2">
         <div className="flex flex-col items-center text-center">
           <AboutLogo size={72} />
-          <h2 className={`mt-4 ${SETTINGS_BRAND_TITLE_CLASS}`}>{updatesDisabled ? 'OpenChamber Fork' : 'OpenChamber'}</h2>
+          <h2 className={`mt-4 ${SETTINGS_BRAND_TITLE_CLASS}`}>{productName}</h2>
           <div className="mt-2 space-y-1 typography-ui text-muted-foreground">
             {isNativeApp ? (
               <>
@@ -626,7 +627,7 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({ initialUpdateDialo
         {updateChannelControl && <div className="flex justify-center">{updateChannelControl}</div>}
 
         <div className="flex justify-center">
-          {updatesDisabled && <span>{t('settings.openchamber.about.updatesDisabled')}</span>}
+          {updatesDisabled && <span>{t('settings.openchamber.about.updatesDisabled', { appName: productName })}</span>}
           {!updatesDisabled && !update.available && !update.error && (
             <Button
               type="button"
@@ -787,7 +788,7 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({ initialUpdateDialo
         <div className="flex items-center gap-4">
           <AboutLogo size={48} />
           <div className="min-w-0 space-y-1">
-            <h2 className={SETTINGS_BRAND_TITLE_CLASS}>{updatesDisabled ? 'OpenChamber Fork' : 'OpenChamber'}</h2>
+            <h2 className={SETTINGS_BRAND_TITLE_CLASS}>{productName}</h2>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
               {[
                 { href: GITHUB_URL, icon: 'github-fill' as const, label: 'GitHub' },
@@ -847,7 +848,7 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({ initialUpdateDialo
             info={updateChannelControl ? t('settings.openchamber.about.field.updateChannelHint') : undefined}
             controlClassName={valueRow}
           >
-            {updatesDisabled ? t('settings.openchamber.about.updatesDisabled') : <>
+            {updatesDisabled ? t('settings.openchamber.about.updatesDisabled', { appName: productName }) : <>
               {updateChannelControl}
               <Button size="sm" variant="outline" onClick={checkAll} disabled={isChecking}>
                 {t('settings.openchamber.about.actions.checkForUpdates')}

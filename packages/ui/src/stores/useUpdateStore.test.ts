@@ -132,10 +132,10 @@ describe('parseUpdateCheckResponse', () => {
 })
 
 describe('useUpdateStore checkForUpdates', () => {
-  test('the fork build skips native and server feed requests and clears any offer', async () => {
-    const previous = process.env.VITE_OPENCHAMBER_FORK
+  for (const flag of ['VITE_OPENCHAMBER_FORK', 'VITE_OPENCHAMBER_UPDATES_DISABLED']) test(`${flag} skips native and server feed requests and clears any offer`, async () => {
+    const previous = process.env[flag]
     try {
-      process.env.VITE_OPENCHAMBER_FORK = '1'
+      process.env[flag] = '1'
       const requestsBefore = updateRequests
       await useUpdateStore.getState().checkForUpdates()
       expect(updateRequests).toBe(requestsBefore)
@@ -143,8 +143,8 @@ describe('useUpdateStore checkForUpdates', () => {
       expect(useUpdateStore.getState().info).toBeNull()
       expect(useUpdateStore.getState().error).toBeNull()
     } finally {
-      if (previous === undefined) delete process.env.VITE_OPENCHAMBER_FORK
-      else process.env.VITE_OPENCHAMBER_FORK = previous
+      if (previous === undefined) delete process.env[flag]
+      else process.env[flag] = previous
     }
   });
   const downloadedState = {

@@ -1,5 +1,5 @@
 import { canReuseManagedOpenCodePreflight } from './opencode-readiness.mjs';
-import { APP_NAME, IS_FORK } from './desktop-flavour.mjs';
+import { APP_NAME, IS_FORK, UPDATES_DISABLED } from './desktop-flavour.mjs';
 import { app, BrowserWindow, clipboard, ClipboardItem, dialog, globalShortcut, ipcMain, Menu, MessageChannelMain, nativeTheme, net as electronNet, Notification, powerMonitor, powerSaveBlocker, protocol, screen, session, shell, webContents } from 'electron';
 import contextMenu from 'electron-context-menu';
 import log from 'electron-log/main.js';
@@ -1690,7 +1690,7 @@ const spawnLocalServer = async () => {
     // password on this machine's screen, so nobody at a phone could answer it
     // and the server would stay down until someone at the desk did.
     desktopUpdater: {
-      updatesDisabled: IS_FORK,
+      updatesDisabled: UPDATES_DISABLED,
       check: async () => {
         const updateInfo = await handleInvoke(null, 'desktop_check_for_updates');
         return isLinuxPackageInstall() ? { ...updateInfo, installBlocked: 'desktop-host' } : updateInfo;
@@ -3767,10 +3767,10 @@ const applyUpdaterChannel = (channel, source = pickUpdaterSource({ mirrorFailedA
 };
 
 const setupAutoUpdater = () => {
-  if (IS_FORK) {
+  if (UPDATES_DISABLED) {
     autoUpdater.autoDownload = false;
     autoUpdater.autoInstallOnAppQuit = false;
-    log.info('[electron] updates disabled for OpenChamber Fork', {
+    log.info('[electron] updates disabled for this build', {
       userData: app.getPath('userData'), dataDir: path.dirname(settingsFilePath()), appName: app.getName(),
     });
     return;
@@ -5217,7 +5217,7 @@ const handleInvoke = async (browserWindow, command, args = {}) => {
     }
 
     case 'desktop_set_update_channel': {
-      if (IS_FORK) assertUpdaterCapability({ packaged: app.isPackaged });
+      if (UPDATES_DISABLED) assertUpdaterCapability({ packaged: app.isPackaged });
       if (!isUpdateChannel(args?.channel)) {
         throw new Error('Unknown update channel');
       }
@@ -5229,7 +5229,7 @@ const handleInvoke = async (browserWindow, command, args = {}) => {
     }
 
     case 'desktop_check_for_updates': {
-      if (IS_FORK) return { available: false, currentVersion: APP_VERSION, version: null, updatesDisabled: true };
+      if (UPDATES_DISABLED) return { available: false, currentVersion: APP_VERSION, version: null, updatesDisabled: true };
       assertUpdaterCapability({ packaged: app.isPackaged });
       // electron-updater answers a check that is already running, for the
       // feed it started on. A channel switched meanwhile waits for that check

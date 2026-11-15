@@ -605,7 +605,7 @@ export const settingsDict = {
   'settings.openchamber.about.native.appVersion': '此应用：{version}',
   'settings.openchamber.about.toast.serverLatestVersion': '服务器已是最新版 OpenChamber',
   'settings.openchamber.about.toast.serverLatestAppUpdate': '服务器已是最新版本，应用有可用更新',
-  'settings.openchamber.about.updatesDisabled': 'OpenChamber Fork 已关闭更新。请手动安装新的分叉构建版本。',
+  'settings.openchamber.about.updatesDisabled': '{appName} 已关闭更新。请手动安装新的分叉构建版本。',
   'settings.openchamber.about.actions.checkForUpdates': '检查更新',
   'settings.openchamber.about.toast.latestVersion': '你已是最新版本',
   'settings.agents.sidebar.title': '智能体',

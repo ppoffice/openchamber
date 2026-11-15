@@ -591,6 +591,20 @@ Add new native capabilities in this order:
 
 ### Fork installer
 
+For a Windows x64 build that replaces the stable installation, set
+`OPENCHAMBER_DESKTOP_CHANNEL=official-no-updates`. Its builder configuration
+is identical to stable except `publish: null`. Package name, app id, executable,
+profile, data directory, process registry, protocol and installer identity stay
+stable. The same compile-time update guards and About notice apply. Install
+these builds manually, after closing the installed app and backing up its data.
+
+#### Why update policy is separate from identity
+
+The `fork` flavour supports a side-by-side installation. `official-no-updates`
+supports replacing stable while retaining its data and OS registrations. Only
+`IS_FORK` selects isolated paths and names; `UPDATES_DISABLED` guards updates
+for both flavours. Default stable and Canary builds keep their existing policy.
+
 On Windows x64, set `OPENCHAMBER_DESKTOP_CHANNEL=fork` and run
 `bun run electron:build`. This produces an unsigned per-user NSIS installer
 for `OpenChamber Fork`, with app id `dev.openchamber.desktop.fork`, its own

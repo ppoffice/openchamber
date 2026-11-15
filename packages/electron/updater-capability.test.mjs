@@ -5,7 +5,7 @@ import { assertUpdaterCapability } from './updater-capability.mjs';
 
 test('a fork cannot enable update checks, downloads or installation on any platform', () => {
   for (const platform of ['win32', 'darwin', 'linux']) {
-    assert.throws(() => assertUpdaterCapability({ platform, packaged: true, updatesDisabled: true }), /Updates are disabled in OpenChamber Fork/);
+    assert.throws(() => assertUpdaterCapability({ platform, packaged: true, updatesDisabled: true }), /Updates are disabled in this build/);
   }
 });
 

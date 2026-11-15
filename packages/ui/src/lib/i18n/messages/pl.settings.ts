@@ -776,7 +776,7 @@ export const settingsDict = {
   'settings.notifications.page.toast.requestPermissionFailed': 'Nie udało się poprosić o uprawnienia do powiadomień',
   'settings.notifications.page.toast.testNotificationFailed': 'Nie udało się wysłać powiadomienia testowego',
   'settings.notifications.page.toast.testNotificationSent': 'Powiadomienie testowe zostało wysłane pomyślnie',
-  'settings.openchamber.about.updatesDisabled': 'Aktualizacje OpenChamber Fork są wyłączone. Nowe wersje forka instaluj ręcznie.',
+  'settings.openchamber.about.updatesDisabled': 'Aktualizacje {appName} są wyłączone. Nowe wersje forka instaluj ręcznie.',
   'settings.openchamber.about.actions.checkForUpdates': 'Sprawdź aktualizacje',
   'settings.openchamber.about.actions.checkUpdates': 'Sprawdź aktualizacje',
   'settings.openchamber.about.actions.update': 'Aktualizuj',

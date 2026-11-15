@@ -638,7 +638,7 @@ export const settingsDict = {
   'settings.openchamber.about.native.appVersion': 'このアプリ: {version}',
   'settings.openchamber.about.toast.serverLatestVersion': 'サーバーは最新の OpenChamber です',
   'settings.openchamber.about.toast.serverLatestAppUpdate': 'サーバーは最新です。アプリのアップデートがあります',
-  'settings.openchamber.about.updatesDisabled': 'OpenChamber Forkの更新は無効です。新しいフォークのビルドは手動でインストールしてください。',
+  'settings.openchamber.about.updatesDisabled': '{appName}の更新は無効です。新しいフォークのビルドは手動でインストールしてください。',
   'settings.openchamber.about.actions.checkForUpdates': 'アップデートを確認',
   'settings.openchamber.about.toast.latestVersion': '最新バージョンです',
   'settings.agents.sidebar.title': 'エージェント',

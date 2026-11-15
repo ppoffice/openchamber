@@ -267,7 +267,7 @@ export const useUpdateStore = create<UpdateStore>()((set, get) => ({
   checkForUpdates: async () => {
     const runtime = detectRuntimeType();
     if (!runtime) return null;
-    if (runtime === 'desktop' && import.meta.env.VITE_OPENCHAMBER_FORK === '1') {
+    if (runtime === 'desktop' && (import.meta.env.VITE_OPENCHAMBER_FORK === '1' || import.meta.env.VITE_OPENCHAMBER_UPDATES_DISABLED === '1')) {
       set({ ...initialState, runtimeType: runtime, lastChecked: Date.now() });
       return null;
     }

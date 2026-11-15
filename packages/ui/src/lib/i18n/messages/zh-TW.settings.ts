@@ -602,7 +602,7 @@ export const settingsDict = {
   'settings.openchamber.about.native.appVersion': '此應用程式：{version}',
   'settings.openchamber.about.toast.serverLatestVersion': '伺服器已是最新版 OpenChamber',
   'settings.openchamber.about.toast.serverLatestAppUpdate': '伺服器已是最新版本，應用程式有可用更新',
-  'settings.openchamber.about.updatesDisabled': 'OpenChamber Fork 已關閉更新。請手動安裝新的分支建置版本。',
+  'settings.openchamber.about.updatesDisabled': '{appName} 已關閉更新。請手動安裝新的分支建置版本。',
   'settings.openchamber.about.actions.checkForUpdates': '檢查更新',
   'settings.openchamber.about.toast.latestVersion': '你已是最新版本',
   'settings.agents.sidebar.title': 'Agents',

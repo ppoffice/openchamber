@@ -605,7 +605,7 @@ export const settingsDict = {
   "settings.openchamber.about.native.appVersion": "Цей застосунок: {version}",
   "settings.openchamber.about.toast.serverLatestVersion": "На сервері найновіша версія OpenChamber",
   "settings.openchamber.about.toast.serverLatestAppUpdate": "Сервер оновлений, а для застосунку є оновлення",
-  "settings.openchamber.about.updatesDisabled": "Оновлення OpenChamber Fork вимкнено. Установлюйте нові збірки форку вручну.",
+  "settings.openchamber.about.updatesDisabled": "Оновлення {appName} вимкнено. Установлюйте нові збірки форку вручну.",
   "settings.openchamber.about.actions.checkForUpdates": "Перевірити наявність оновлень",
   "settings.openchamber.about.toast.latestVersion": "Ви використовуєте останню версію",
   "settings.agents.sidebar.title": "Агенти",

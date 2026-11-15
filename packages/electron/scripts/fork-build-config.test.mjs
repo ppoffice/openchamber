@@ -1,7 +1,16 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
-import { forkBuildConfig } from './fork-build-config.mjs';
+import { forkBuildConfig, officialNoUpdatesBuildConfig } from './fork-build-config.mjs';
+
+test('official-no-updates differs from the entire stable configuration only in publish', () => {
+  const release = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')).build;
+  const original = structuredClone(release);
+  const config = officialNoUpdatesBuildConfig(release);
+  assert.equal(config.publish, null);
+  assert.deepEqual({ ...config, publish: release.publish }, release);
+  assert.deepEqual(release, original);
+});
 
 test('the fork has its own Windows installer identity and no published update source', () => {
   const releaseConfig = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')).build;

@@ -1,3 +1,10 @@
+// Retains every stable identity field, including the package-name default that
+// NSIS uses for the install folder and uninstall registration.
+export const officialNoUpdatesBuildConfig = (releaseConfig) => ({
+  ...structuredClone(releaseConfig),
+  publish: null,
+});
+
 export const forkBuildConfig = (releaseConfig) => ({
   ...structuredClone(releaseConfig),
   appId: 'dev.openchamber.desktop.fork',
