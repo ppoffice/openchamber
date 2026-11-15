@@ -89,7 +89,7 @@ You can also add a local `.zip` or an https link to a git repository or a zip fi
 - `{ "mode": "dialog", "entry": "panel/attach.html" }` opens a separate page of yours in the window, so the picker does not have to share code with the rail panel
 - omit it and the extension stays off that menu
 
-Your page can tell where it is from `ctx.surface`: `panel`, `dialog`, `page`, `status`, or `block`. When the user clicks an attached item, its `data` comes back in `ctx.item`. Opening from the rail, the + menu, or a row in the Pages section starts without an item.
+Your page can tell where it is from `ctx.surface`: `panel`, `dialog`, `page`, `status`, `header`, or `block`. When the user clicks an attached item, its `data` comes back in `ctx.item`. Opening from the rail, the + menu, or a row in the Pages section starts without an item.
 
 `contributes.page: true` makes your panel available full-screen from its own row in the Pages section of the sidebar. Use `{ "entry": "panel/page.html", "title": "Board" }` for separate HTML and an optional title. Ship that HTML and its built scripts. `true` reuses `panel.entry`; a page with its own `entry` needs no rail panel, so an extension can be only a full-screen page. A page uses the same sandbox and permissions, and opens only when the user selects it. Reload, pause, removal, or a server switch closes it.
 
@@ -111,6 +111,7 @@ Drawing a panel and reading the current session need no permission. Anything tha
 | `model` | one-off text generation with the user's Small Model (`generate`), outside any session |
 | `shells` | watch the shell commands your agents run in the background, read their output, and stop them (`onRunningShells`, `readShellOutput`, `stopShell`) |
 | `microphone` | hear the user through their microphone, for calls or voice input (`openMicrophone`) |
+| `usage` | read provider usage (`onUsage`, `refreshUsage`, `openUsageSettings`) |
 
 Thirteen more are added for you: `network` when you declare an `integration`, `service` when you declare a `service`, `filesystem` when you declare `filesystem` patterns, `origins` when you declare `origins`, `conversation` when a session action asks for the messages (see [Actions, commands, and the badge](#actions-commands-and-the-badge)), `transcript` when `sessionEvents` or `sessionControl` asks for `content` (see [Session events](/sdk/host/#session-events)), `sessionControl` when your service acts on sessions (see [Calling OpenChamber](/sdk/host/#calling-openchamber-from-your-service)), `sessionAnswers` when it answers the agent's permission requests and forms for the user (`sessionControl: { answers: true }`), `instructions` when it adds to what agents read, `skills` when you declare `contributes.skills`, a package folder of skills that reach every agent while the extension is on, `opencodePlugin` when you declare `contributes.opencodePlugin` (see [An OpenCode plugin in your package](#an-opencode-plugin-in-your-package)), `links` when you declare `contributes.links` (see [Links in chat messages](#links-in-chat-messages)), and `marks` when you declare `contributes.marks` (see [Marks on sidebar rows](/sdk/host/#marks-on-sidebar-rows)).
 
