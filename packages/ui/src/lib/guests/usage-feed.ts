@@ -129,6 +129,8 @@ const projectProvider = (
     const entries = Object.entries(modelUsage.windows ?? {});
     if (entries.length === 0) continue;
     const [label, window] = entries[0];
+    // A model name is the extension's own text for its own provider, so it
+    // passes through as is, the same text Work Status shows.
     const name = nonEmpty(getDisplayModelName(modelName), modelName);
     const key = `model-${models.length}-0`;
     models.push({
