@@ -99,6 +99,14 @@ afterEach(() => {
 });
 
 describe('OpenChamber desktop host update route', () => {
+  it('updates-off release notes return before fetching any release source', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('unexpected feed request'));
+    const { app } = createApp({ desktopUpdater: { updatesDisabled: true } });
+    await request(app).get('/api/openchamber/release-notes?version=2.7.1').expect(200, {
+      releases: [], updatesDisabled: true,
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
   it('a fork answers every client app type without consulting an update feed', async () => {
     const desktopUpdater = { updatesDisabled: true, check: vi.fn() };
     const { app } = createApp({ environment: { OPENCHAMBER_RUNTIME: 'desktop' }, desktopUpdater });

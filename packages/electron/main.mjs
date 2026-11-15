@@ -276,7 +276,7 @@ const readAppMetadata = () => {
     } catch {
     }
   }
-  return { name: '@openchamber/electron', version: app.getVersion() };
+  return { name: IS_FORK ? 'openchamber-fork' : '@openchamber/electron', version: app.getVersion() };
 };
 
 const APP_METADATA = readAppMetadata();
@@ -5633,6 +5633,7 @@ const buildMacMenu = (locale = 'en') => {
         { label: t('about'), click: () => dispatchAction('about') },
         {
           label: t('checkForUpdates'),
+          enabled: !UPDATES_DISABLED,
           click: () => dispatchCheckForUpdates(),
         },
         { type: 'separator' },
@@ -5741,6 +5742,7 @@ const buildAutoHiddenMenu = (locale = 'en') => {
         { label: t('about'), click: () => dispatchAction('about') },
         {
           label: t('checkForUpdates'),
+          enabled: !UPDATES_DISABLED,
           click: () => dispatchCheckForUpdates(),
         },
         { type: 'separator' },

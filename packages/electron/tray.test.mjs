@@ -2,11 +2,12 @@ import { expect, mock, test } from 'bun:test';
 import { EventEmitter } from 'node:events';
 
 let attachedMenu;
+let tooltip;
 class Tray extends EventEmitter {
   setIgnoreDoubleClickEvents() {}
   setImage() {}
   setTitle() {}
-  setToolTip() {}
+  setToolTip(value) { tooltip = value; }
   setContextMenu(menu) { attachedMenu = menu; }
   destroy() {}
 }
@@ -22,6 +23,7 @@ test('the native menu lifecycle reports each opening through the renderer action
   const tray = createTrayController({ idleIconPath: '', unseenIconPath: '', breathIconPaths: [], onAction: action => actions.push(action) });
   try {
     tray.update({ sessions: [] });
+    expect(tooltip).toBe('OpenChamber — no active sessions');
     expect(actions).toEqual([]);
     attachedMenu.emit('menu-will-show');
     attachedMenu.emit('menu-will-close');

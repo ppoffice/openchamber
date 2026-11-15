@@ -219,6 +219,9 @@ export const registerOpenChamberRoutes = (app, dependencies) => {
   // from `since` to `version` brings. 502 when GitHub could not be read, so
   // the page never mistakes an outage for a release without notes.
   app.get('/api/openchamber/release-notes', async (req, res) => {
+    if (desktopUpdater?.updatesDisabled) {
+      return res.json({ releases: [], updatesDisabled: true });
+    }
     const { fetchReleaseNotes, VERSION_PATTERN, CANARY_VERSION_PATTERN } = await import('../changelog/update-notes.js');
     // Query values can be arrays; only the string form is checked and used.
     const isVersion = (value) => VERSION_PATTERN.test(value) || CANARY_VERSION_PATTERN.test(value);

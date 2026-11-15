@@ -1,8 +1,9 @@
 # OpenCode Module Documentation
 
 When the embedded desktop updater declares `updatesDisabled`, the OpenChamber
-update-check route returns an unavailable result before consulting a feed, for
-every client app type. This is the fork package's build policy.
+update-check route returns an unavailable result and release-notes returns an
+empty disabled result before consulting a feed, for every client app type.
+Both desktop updates-off flavours enforce this build policy.
 
 ## Purpose
 This module provides OpenCode server integration utilities for the web server runtime, including configuration management and provider authentication.
