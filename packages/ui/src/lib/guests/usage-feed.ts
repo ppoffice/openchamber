@@ -14,7 +14,7 @@ import {
   type GuestUsageWindow,
 } from '@openchamber/sdk';
 
-import { formatQuotaResetLabel, formatQuotaWindowValueLabel, formatWindowLabel, isKnownWindowLabel, resolveUsageTone } from '@/lib/quota';
+import { formatQuotaResetLabel, formatQuotaWindowValueLabel, formatWindowLabel, resolveUsageTone } from '@/lib/quota';
 import { getDisplayModelName } from '@/lib/quota/model-families';
 import type { I18nKey, I18nParams } from '@/lib/i18n';
 import type { QuotaProviderMeta } from '@/lib/quota';
@@ -69,17 +69,13 @@ const projectWindow = (
   label: string,
   window: UsageWindow,
   input: UsageFeedInput,
-  extensionProvider: boolean,
 ): GuestUsageWindow => {
   const usedPercent = percent(window.usedPercent);
   const remainingPercent = percent(window.remainingPercent);
   const displayPercent = input.displayMode === 'remaining' ? remainingPercent : usedPercent;
-  // A built-in provider's valueLabel is the server's own formatted string and
-  // is safe to draw as Work Status does. An extension's valueLabel is free
-  // text, so only a string the host made from structured data crosses.
-  const valueLabel = !extensionProvider || window.value !== undefined || window.creditsUsed !== undefined
-    ? formatQuotaWindowValueLabel(window, displayPercent, input.translate)
-    : null;
+  // Extension window text passes through the same formatter as Work Status,
+  // just as extension model names do.
+  const valueLabel = formatQuotaWindowValueLabel(window, displayPercent, input.translate);
   const resetLabel = formatQuotaResetLabel(
     window.resetAt,
     window.resetAfterFormatted ?? window.resetAtFormatted,
@@ -103,19 +99,11 @@ const projectProvider = (
   result: ProviderResult | undefined,
   input: UsageFeedInput,
 ): GuestUsageProvider => {
-  const extensionProvider = provider.id.startsWith('ext-');
-  // A built-in gets exactly the label Work Status draws, including the raw
-  // server key when the host has no translation. An extension's own label is
-  // free text, so only a known key is translated and the rest is its opaque key.
-  const labelFor = (rawLabel: string, key: string): string => (
-    extensionProvider && !isKnownWindowLabel(rawLabel) ? key : formatWindowLabel(rawLabel)
-  );
-
   const windows: GuestUsageWindow[] = [];
   for (const [label, window] of Object.entries(result?.usage?.windows ?? {})) {
     if (windows.length >= GUEST_USAGE_WINDOWS_MAX) break;
     const key = `window-${windows.length}`;
-    windows.push(projectWindow(key, labelFor(label, key), window, input, extensionProvider));
+    windows.push(projectWindow(key, formatWindowLabel(label), window, input));
   }
 
   const models: GuestUsageModel[] = [];
@@ -136,11 +124,11 @@ const projectProvider = (
     models.push({
       key: cut(modelName, GUEST_USAGE_ID_MAX),
       name: cut(name, GUEST_USAGE_LABEL_MAX),
-      windows: [projectWindow(key, labelFor(label, key), window, input, extensionProvider)],
+      windows: [projectWindow(key, formatWindowLabel(label), window, input)],
     });
   }
 
-  // The provider's own words never cross: an error string can carry an
+  // The provider's error text never crosses: an error string can carry an
   // account email or organization name. The host says what happened in its
   // own translated words instead.
   const refreshError = input.refreshErrors[provider.id];
