@@ -6,7 +6,6 @@ export {
   formatQuotaResetLabel,
   formatQuotaResetShort,
   compactQuotaValueLabel,
-  isKnownWindowLabel,
   resolveUsageTone,
   formatWindowLabel,
 } from './utils';
