@@ -247,7 +247,7 @@ describe('parseManifest', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.code).toBe('invalid-capabilities');
-      expect(result.message).toContain('"prompt", "sessions", "files", "model", "shells", or "usage"');
+      expect(result.message).toContain('"prompt", "sessions", "files", "model", "shells", "microphone", "usage"');
     }
   });
 
