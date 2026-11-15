@@ -1458,13 +1458,15 @@ describe('contributes.headerItem', () => {
 
   test('a header-only package cannot declare things that open or invoke another frame', () => {
     const extras: Array<Partial<OpenChamberContributes>> = [
-      { page: { entry: 'page.html' } }, { attach: 'dialog' }, { commands: [{ name: 'usage' }] },
+      { page: true }, { attach: 'dialog' }, { commands: [{ name: 'usage' }] },
       { actions: [{ id: 'inspect', label: 'Inspect', where: 'message', mode: 'background' }] },
     ];
     for (const extra of extras) {
       expect(parse({ panel, headerItem, ...extra })).toMatchObject({ ok: false, code: 'invalid-panel' });
     }
     expect(parse({ panel, headerItem, background: { entry: 'background/index.html' }, commands: [{ name: 'usage' }] }))
+      .toMatchObject({ ok: true });
+    expect(parse({ panel, headerItem, page: { entry: 'page.html' } }))
       .toMatchObject({ ok: true });
   });
 
