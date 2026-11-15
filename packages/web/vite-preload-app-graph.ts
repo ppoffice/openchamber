@@ -1,4 +1,5 @@
 import type { Plugin } from 'vite';
+import { normalizePath } from 'vite';
 
 /**
  * Starts fetching the desktop application's code while the document is still
@@ -43,6 +44,7 @@ export const preloadAppGraph = (options: {
   protocols: readonly string[];
 }): Plugin => {
   let base = '/';
+  const appModule = normalizePath(options.appModule);
   return {
     name: 'openchamber-preload-app-graph',
     apply: 'build',
@@ -54,7 +56,7 @@ export const preloadAppGraph = (options: {
       handler(_html, context) {
         const bundle = context.bundle;
         if (!bundle || !context.chunk || !context.filename.endsWith(`/${options.document}`)) return;
-        const app = Object.values(bundle).find((chunk) => chunk.type === 'chunk' && Object.hasOwn(chunk.modules, options.appModule));
+        const app = Object.values(bundle).find((chunk) => chunk.type === 'chunk' && Object.hasOwn(chunk.modules, appModule));
         if (!app) {
           this.error(`preloadAppGraph: no chunk for ${options.appModule}`);
         }

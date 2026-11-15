@@ -1,9 +1,12 @@
 import { describe, expect, test } from 'vitest';
-import { transformWithEsbuild } from 'vite';
+import { build, transformWithEsbuild } from 'vite';
+import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 
 import { escapeRegexLiterals, escapeRemainingWide } from './vite-one-byte-chunks';
 import { dictionaryLocale, localeSliceId, sliceLocale } from './vite-locale-slices';
-import { preloadScript, staticImportClosure } from './vite-preload-app-graph';
+import { preloadAppGraph, preloadScript, staticImportClosure } from './vite-preload-app-graph';
 
 const evaluate = (expression: string) => new Function(`return ${expression}`)();
 const WIDE = /[Ā-\u{10FFFF}]/u;
@@ -91,6 +94,28 @@ describe('locale slices', () => {
 });
 
 describe('preloadAppGraph', () => {
+  test('matches a native Windows module path to Vite normalized chunk ids', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'preload-app-graph-'));
+    try {
+      await writeFile(path.join(root, 'index.html'), '<script type="module" src="/entry.js"></script>');
+      await writeFile(path.join(root, 'entry.js'), 'import("./app.js")');
+      await writeFile(path.join(root, 'app.js'), 'console.log("app")');
+      const result = await build({
+        configFile: false,
+        root,
+        logLevel: 'silent',
+        plugins: [preloadAppGraph({ appModule: path.join(root, 'app.js'), document: 'index.html', protocols: ['openchamber-ui:'] })],
+        build: { write: false },
+      });
+      expect(Array.isArray(result)).toBe(false);
+      if (Array.isArray(result) || !('output' in result)) throw new Error('Expected one Rollup output');
+      const html = result.output.find((entry) => entry.type === 'asset' && entry.fileName === 'index.html');
+      expect(html?.type === 'asset' && String(html.source)).toContain('l.rel="modulepreload"');
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   const chunk = (imports: string[], dynamicImports: string[] = []) => ({ type: 'chunk' as const, imports, dynamicImports });
 
   test('the closure follows static imports once and stops at dynamic ones', () => {
