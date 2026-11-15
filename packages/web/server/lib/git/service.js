@@ -1790,7 +1790,8 @@ export async function computeIntegratePlan(input = {}) {
 }
 
 const createIntegrateTempWorktree = async (repoRoot, targetBranch) => {
-  const tmpParent = path.join(os.homedir(), '.config', 'openchamber', 'tmp');
+  const dataDir = process.env.OPENCHAMBER_DATA_DIR?.trim() || path.join(os.homedir(), '.config', 'openchamber');
+  const tmpParent = path.join(dataDir, 'tmp');
   await fsp.mkdir(tmpParent, { recursive: true });
   const tmpDir = await fsp.mkdtemp(path.join(tmpParent, 'oc-integrate-'));
   try {

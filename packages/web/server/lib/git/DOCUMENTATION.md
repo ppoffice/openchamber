@@ -3,6 +3,10 @@
 ## Purpose
 This module provides Git repository operations for the web server runtime, including repository management, branch/worktree operations, status/diff queries, commit handling, and merge/rebase workflows.
 
+Temporary integration worktrees live under `OPENCHAMBER_DATA_DIR/tmp` when the
+data directory is overridden, so a fork desktop build keeps them separate from
+the official app. The default remains `~/.config/openchamber/tmp`.
+
 ## Entrypoints and structure
 - `packages/web/server/lib/git/`: Git module directory containing all Git-related functionality.
   - `index.js`: Public API entry point imported by `packages/web/server/index.js`.

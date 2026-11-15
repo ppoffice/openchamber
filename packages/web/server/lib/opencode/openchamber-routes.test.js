@@ -99,6 +99,17 @@ afterEach(() => {
 });
 
 describe('OpenChamber desktop host update route', () => {
+  it('a fork answers every client app type without consulting an update feed', async () => {
+    const desktopUpdater = { updatesDisabled: true, check: vi.fn() };
+    const { app } = createApp({ environment: { OPENCHAMBER_RUNTIME: 'desktop' }, desktopUpdater });
+    for (const appType of ['web', 'desktop-electron', 'mobile', 'vscode']) {
+      await request(app).get(`/api/openchamber/update-check?appType=${appType}`).expect(200, {
+        available: false, updatesDisabled: true, packageManager: 'electron',
+      });
+    }
+    expect(packageManager.checkForUpdates).not.toHaveBeenCalled();
+    expect(desktopUpdater.check).not.toHaveBeenCalled();
+  });
   it('reports a restart rejection until the user retries installation', async () => {
     const desktopUpdater = {
       check: vi.fn(async () => ({ available: true, currentVersion: '1.17.0', version: '1.17.1' })),

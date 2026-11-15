@@ -221,6 +221,10 @@ verbatim, a reply spoken in full) do not consult it; they silence the 404 on
 
 ### UI state stores
 
+The fork desktop UI build skips native and server update checks before either
+request starts. Electron independently refuses downloads and installation, so
+this UI policy cannot enable updates in a fork package.
+
 `useUpdateStore` projects desktop package readiness by version. A failed native
 check preserves the offered package; a successful no-update result clears its
 readiness. A changed offer clears readiness while an active download remains

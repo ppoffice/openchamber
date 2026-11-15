@@ -47,6 +47,7 @@ const result = await Bun.build({
   sourcemap: 'none',
   naming: '[name].mjs',
   define: {
+    __OPENCHAMBER_FORK_BUILD__: process.env.OPENCHAMBER_DESKTOP_CHANNEL === 'fork' ? 'true' : 'false',
     __OPENCHAMBER_UPDATER_E2E_BUILD__: updaterE2eBuild ? 'true' : 'false',
   },
 });

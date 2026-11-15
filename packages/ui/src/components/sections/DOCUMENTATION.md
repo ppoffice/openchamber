@@ -1,5 +1,9 @@
 # Settings sections
 
+The fork desktop build shows a localized updates-off notice in About in place
+of the channel selector and check button. Official desktop and other runtime
+builds keep their existing update controls.
+
 One directory per Settings page. `shared/` holds the page chrome and controls
 every page is built from; see `.agents/skills/settings-ui-patterns/SKILL.md` for
 which primitive to reach for.

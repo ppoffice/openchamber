@@ -6,9 +6,13 @@ let restartOutcome: 'pending' | 'reject' | 'success' = 'pending'
 let desktopCheckResult: UpdateInfo | null = null
 let desktopCheckError: Error | null = null
 let downloadHandler: () => Promise<boolean> = async () => true
+let updateRequests = 0
 
 mock.module('@/lib/runtime-fetch', () => ({
-  runtimeFetch: async () => new Response(JSON.stringify({ nextSuggestedCheckInSec: 3600 })),
+  runtimeFetch: async () => {
+    updateRequests += 1
+    return new Response(JSON.stringify({ nextSuggestedCheckInSec: 3600 }))
+  },
 }))
 
 const desktop = await import('@/lib/desktop')
@@ -20,7 +24,10 @@ mock.module('@/lib/desktop', () => ({
   isWebRuntime: () => false,
   isElectronShell: () => true,
   isDesktopLocalOriginActive: () => true,
-  checkForDesktopUpdates: () => desktopCheckError ? Promise.reject(desktopCheckError) : Promise.resolve(desktopCheckResult),
+  checkForDesktopUpdates: () => {
+    updateRequests += 1
+    return desktopCheckError ? Promise.reject(desktopCheckError) : Promise.resolve(desktopCheckResult)
+  },
   downloadDesktopUpdate: () => downloadHandler(),
   restartToApplyUpdate: () => {
     restartAttempts += 1
@@ -125,6 +132,21 @@ describe('parseUpdateCheckResponse', () => {
 })
 
 describe('useUpdateStore checkForUpdates', () => {
+  test('the fork build skips native and server feed requests and clears any offer', async () => {
+    const previous = process.env.VITE_OPENCHAMBER_FORK
+    try {
+      process.env.VITE_OPENCHAMBER_FORK = '1'
+      const requestsBefore = updateRequests
+      await useUpdateStore.getState().checkForUpdates()
+      expect(updateRequests).toBe(requestsBefore)
+      expect(useUpdateStore.getState().available).toBe(false)
+      expect(useUpdateStore.getState().info).toBeNull()
+      expect(useUpdateStore.getState().error).toBeNull()
+    } finally {
+      if (previous === undefined) delete process.env.VITE_OPENCHAMBER_FORK
+      else process.env.VITE_OPENCHAMBER_FORK = previous
+    }
+  });
   const downloadedState = {
     checking: false,
     available: true,

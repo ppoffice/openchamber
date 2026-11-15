@@ -3,10 +3,22 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { canaryBuildConfig } from './canary-build-config.mjs';
+import { forkBuildConfig } from './fork-build-config.mjs';
 import { resolveTargetArchitecture } from './target-architecture.mjs';
 
 const env = { ...process.env };
 const builderArgs = process.argv.slice(2);
+
+if (env.OPENCHAMBER_DESKTOP_CHANNEL === 'fork') {
+  if (process.platform !== 'win32') throw new Error('The fork installer supports Windows only');
+  const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const releaseConfig = JSON.parse(fs.readFileSync(path.join(packageDir, 'package.json'), 'utf8')).build;
+  const configPath = path.join(packageDir, '.cache', 'fork-builder-config.json');
+  fs.mkdirSync(path.dirname(configPath), { recursive: true });
+  fs.writeFileSync(configPath, `${JSON.stringify(forkBuildConfig(releaseConfig), null, 2)}\n`);
+  builderArgs.unshift('--config', configPath, '--win', '--x64', '--publish', 'never');
+  console.log('[electron] building OpenChamber Fork: separate identity, updates disabled');
+}
 
 if (env.OPENCHAMBER_DESKTOP_CHANNEL === 'canary') {
   const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');

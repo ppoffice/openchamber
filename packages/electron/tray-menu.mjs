@@ -2,6 +2,7 @@
 // plain tests. `tray.mjs` turns the template into a native menu and rebuilds it
 // only when `trayMenuKey` changes.
 
+import { APP_NAME } from './desktop-flavour.mjs';
 const isLinux = process.platform === 'linux';
 
 const MAX_SESSIONS = 8;
@@ -41,7 +42,7 @@ export const buildTrayMenuTemplate = (snapshot, { onAction, statusIcons }) => {
   const approvals = Array.isArray(snapshot.approvals) ? snapshot.approvals : [];
   const header = typeof snapshot.instanceName === 'string' && snapshot.instanceName.trim()
     ? snapshot.instanceName.trim()
-    : 'OpenChamber';
+    : APP_NAME;
 
   const template = [
     { label: header, enabled: false },

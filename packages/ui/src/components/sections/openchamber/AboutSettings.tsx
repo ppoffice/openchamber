@@ -175,6 +175,7 @@ type AboutSettingsProps = {
 
 export const AboutSettings: React.FC<AboutSettingsProps> = ({ initialUpdateDialogOpen = false }) => {
   const { t } = useI18n();
+  const updatesDisabled = import.meta.env.VITE_OPENCHAMBER_FORK === '1';
   const [updateDialogOpen, setUpdateDialogOpen] = React.useState(initialUpdateDialogOpen);
   const [showChecking, setShowChecking] = React.useState(false);
   const [openChamberVersion, setOpenChamberVersion] = React.useState<string | null>(null);
@@ -259,7 +260,7 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({ initialUpdateDialo
     ? desktopAppVersion || updateStore.info?.currentVersion
     : openChamberVersion || update.info?.currentVersion;
   const leavesCanary = Boolean(offeredVersion && parseCanaryVersion(installedVersion) && !parseCanaryVersion(offeredVersion));
-  const releaseNotes = installedVersion ? (
+  const releaseNotes = installedVersion && !updatesDisabled ? (
     <AboutReleaseNotes
       version={offeredVersion || installedVersion}
       since={offeredVersion && !leavesCanary ? installedVersion : null}
@@ -277,7 +278,7 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({ initialUpdateDialo
   const isNpmServer = updateStore.runtimeType === 'web' && isWebServer && openChamberVersion !== null;
   const [updateChannel, setUpdateChannel] = React.useState<UpdateChannel | null>(null);
   React.useEffect(() => {
-    if (!isDesktopApp && !isNpmServer) return;
+    if (updatesDisabled || (!isDesktopApp && !isNpmServer)) return;
     let cancelled = false;
     const load = isDesktopApp ? getDesktopUpdateChannel() : loadServerUpdateChannel(openChamberVersion ?? '');
     void load.then((channel) => {
@@ -286,7 +287,7 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({ initialUpdateDialo
     return () => {
       cancelled = true;
     };
-  }, [isDesktopApp, isNpmServer, openChamberVersion]);
+  }, [isDesktopApp, isNpmServer, openChamberVersion, updatesDisabled]);
   const openCode = useOpenCodeUpgrade(t('opencodeUpdate.toast.failed.description'));
   const openCodeVersion = openCode.status?.currentVersion ?? null;
   const openCodeUpdateVersion = openCode.phase.kind === 'installed' ? null : openCode.status?.availableVersion ?? null;
@@ -598,7 +599,7 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({ initialUpdateDialo
       <div className="w-full space-y-6 pb-2">
         <div className="flex flex-col items-center text-center">
           <AboutLogo size={72} />
-          <h2 className={`mt-4 ${SETTINGS_BRAND_TITLE_CLASS}`}>OpenChamber</h2>
+          <h2 className={`mt-4 ${SETTINGS_BRAND_TITLE_CLASS}`}>{updatesDisabled ? 'OpenChamber Fork' : 'OpenChamber'}</h2>
           <div className="mt-2 space-y-1 typography-ui text-muted-foreground">
             {isNativeApp ? (
               <>
@@ -625,7 +626,8 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({ initialUpdateDialo
         {updateChannelControl && <div className="flex justify-center">{updateChannelControl}</div>}
 
         <div className="flex justify-center">
-          {!update.available && !update.error && (
+          {updatesDisabled && <span>{t('settings.openchamber.about.updatesDisabled')}</span>}
+          {!updatesDisabled && !update.available && !update.error && (
             <Button
               type="button"
               variant="outline"
@@ -743,7 +745,7 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({ initialUpdateDialo
   // follows a version that does not change width, and the check button
   // follows the channel, so a check moves neither.
   const statusSeparator = <span aria-hidden="true" className="typography-meta text-muted-foreground/60">·</span>;
-  const openChamberStatus = isChecking ? (
+  const openChamberStatus = updatesDisabled ? null : isChecking ? (
     <>
       {statusSeparator}
       <span className="flex items-center gap-1.5 typography-meta text-muted-foreground">
@@ -785,7 +787,7 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({ initialUpdateDialo
         <div className="flex items-center gap-4">
           <AboutLogo size={48} />
           <div className="min-w-0 space-y-1">
-            <h2 className={SETTINGS_BRAND_TITLE_CLASS}>OpenChamber</h2>
+            <h2 className={SETTINGS_BRAND_TITLE_CLASS}>{updatesDisabled ? 'OpenChamber Fork' : 'OpenChamber'}</h2>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
               {[
                 { href: GITHUB_URL, icon: 'github-fill' as const, label: 'GitHub' },
@@ -845,10 +847,12 @@ export const AboutSettings: React.FC<AboutSettingsProps> = ({ initialUpdateDialo
             info={updateChannelControl ? t('settings.openchamber.about.field.updateChannelHint') : undefined}
             controlClassName={valueRow}
           >
-            {updateChannelControl}
-            <Button size="sm" variant="outline" onClick={checkAll} disabled={isChecking}>
-              {t('settings.openchamber.about.actions.checkForUpdates')}
-            </Button>
+            {updatesDisabled ? t('settings.openchamber.about.updatesDisabled') : <>
+              {updateChannelControl}
+              <Button size="sm" variant="outline" onClick={checkAll} disabled={isChecking}>
+                {t('settings.openchamber.about.actions.checkForUpdates')}
+              </Button>
+            </>}
           </SettingsFieldRow>
           <SettingsFieldRow label={t('settings.openchamber.about.field.openCodeVersion')} controlClassName={valueRow}>
             {versionValue(openCodeVersion || t('settings.openchamber.about.state.unknown'))}

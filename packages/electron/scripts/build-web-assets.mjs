@@ -77,6 +77,9 @@ const copyDir = async (src, dst) => {
 };
 
 const bunExe = resolveBun();
+// Only the desktop staging build carries this UI policy. Other web surfaces
+// and the normal release continue to use their own update behavior.
+process.env.VITE_OPENCHAMBER_FORK = process.env.OPENCHAMBER_DESKTOP_CHANNEL === 'fork' ? '1' : '0';
 
 // The bundled server imports @openchamber/sdk from its built `dist`, which
 // nothing else in packaging rebuilds: a stale one makes the app quit at start

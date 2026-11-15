@@ -27,14 +27,23 @@ import { fileURLToPath } from 'node:url';
 import { createShellEnvironmentLoader } from './shell-environment.mjs';
 import { isSplashColor } from './remote-page-policy.mjs';
 import { clearAppImageArgv0FromProcessEnv } from '@openchamber/web/server/lib/inherited-env.js';
+import { assignInjectedEnv } from '@openchamber/web/server/lib/injected-env.js';
+import { APP_NAME, APP_ID, DEEP_LINK_SCHEME, IS_FORK } from './desktop-flavour.mjs';
+
+if (IS_FORK) {
+  assignInjectedEnv(process.env, {
+    OPENCHAMBER_DATA_DIR: path.join(os.homedir(), '.config', 'openchamber-fork'),
+    OPENCHAMBER_MANAGED_PROCESS_REGISTRY: path.join(os.homedir(), '.config', 'openchamber-fork', 'managed-opencode'),
+  });
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const isDev = process.env.OPENCHAMBER_ELECTRON_DEV === '1' || !app.isPackaged;
 
-export const DEEP_LINK_PROTOCOL = 'openchamber';
+export const DEEP_LINK_PROTOCOL = DEEP_LINK_SCHEME;
 export const UI_PROTOCOL = 'openchamber-ui';
-const PACKAGED_APP_USER_MODEL_ID = 'dev.openchamber.desktop';
-const DEV_APP_USER_MODEL_ID = 'dev.openchamber.desktop.dev';
+const PACKAGED_APP_USER_MODEL_ID = APP_ID;
+const DEV_APP_USER_MODEL_ID = `${APP_ID}.dev`;
 export const APP_USER_MODEL_ID = app.isPackaged ? PACKAGED_APP_USER_MODEL_ID : DEV_APP_USER_MODEL_ID;
 export const BACKGROUND_START_ARG = '--background';
 
@@ -401,7 +410,7 @@ export const usesFramelessChrome = () => (
 export const buildMainWindowOptions = ({ bounds, backgroundColor, additionalArguments }) => {
   const usesCustomTitleBar = process.platform === 'darwin' || usesFramelessChrome();
   const options = {
-    title: 'OpenChamber',
+    title: APP_NAME,
     width: bounds?.width ?? DEFAULT_WINDOW_WIDTH,
     height: bounds?.height ?? DEFAULT_WINDOW_HEIGHT,
     minWidth: MIN_WINDOW_WIDTH,

@@ -3,6 +3,12 @@ import test from 'node:test';
 
 import { assertUpdaterCapability } from './updater-capability.mjs';
 
+test('a fork cannot enable update checks, downloads or installation on any platform', () => {
+  for (const platform of ['win32', 'darwin', 'linux']) {
+    assert.throws(() => assertUpdaterCapability({ platform, packaged: true, updatesDisabled: true }), /Updates are disabled in OpenChamber Fork/);
+  }
+});
+
 test('preserves updater behavior outside packaged Linux', () => {
   assert.doesNotThrow(() => assertUpdaterCapability({ platform: 'darwin', packaged: true }));
   assert.doesNotThrow(() => assertUpdaterCapability({ platform: 'win32', packaged: true }));

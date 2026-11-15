@@ -1,4 +1,5 @@
 import { canReuseManagedOpenCodePreflight } from './opencode-readiness.mjs';
+import { APP_NAME, IS_FORK } from './desktop-flavour.mjs';
 import { app, BrowserWindow, clipboard, ClipboardItem, dialog, globalShortcut, ipcMain, Menu, MessageChannelMain, nativeTheme, net as electronNet, Notification, powerMonitor, powerSaveBlocker, protocol, screen, session, shell, webContents } from 'electron';
 import contextMenu from 'electron-context-menu';
 import log from 'electron-log/main.js';
@@ -269,7 +270,7 @@ const readAppMetadata = () => {
     try {
       const raw = fs.readFileSync(candidate, 'utf8');
       const parsed = JSON.parse(raw);
-      if (parsed?.name === '@openchamber/electron' && typeof parsed.version === 'string') {
+      if (parsed?.name === (IS_FORK ? 'openchamber-fork' : '@openchamber/electron') && typeof parsed.version === 'string') {
         return { name: parsed.name, version: parsed.version };
       }
     } catch {
@@ -1689,6 +1690,7 @@ const spawnLocalServer = async () => {
     // password on this machine's screen, so nobody at a phone could answer it
     // and the server would stay down until someone at the desk did.
     desktopUpdater: {
+      updatesDisabled: IS_FORK,
       check: async () => {
         const updateInfo = await handleInvoke(null, 'desktop_check_for_updates');
         return isLinuxPackageInstall() ? { ...updateInfo, installBlocked: 'desktop-host' } : updateInfo;
@@ -3385,7 +3387,7 @@ const createMiniChatWindow = async ({ mode, sessionId = '', directory = '', proj
   const desktopClientToken = effectiveRuntimeConfig.clientToken || '';
   const desktopRequestHeaders = effectiveRuntimeConfig.requestHeaders || {};
   const browserWindow = new BrowserWindow({
-    title: 'OpenChamber Mini Chat',
+    title: `${APP_NAME} Mini Chat`,
     width: MINI_CHAT_WINDOW_WIDTH,
     height: MINI_CHAT_WINDOW_HEIGHT,
     minWidth: MINI_CHAT_MIN_WINDOW_WIDTH,
@@ -3765,6 +3767,14 @@ const applyUpdaterChannel = (channel, source = pickUpdaterSource({ mirrorFailedA
 };
 
 const setupAutoUpdater = () => {
+  if (IS_FORK) {
+    autoUpdater.autoDownload = false;
+    autoUpdater.autoInstallOnAppQuit = false;
+    log.info('[electron] updates disabled for OpenChamber Fork', {
+      userData: app.getPath('userData'), dataDir: path.dirname(settingsFilePath()), appName: app.getName(),
+    });
+    return;
+  }
   if (!app.isPackaged) {
     return;
   }
@@ -4327,7 +4337,7 @@ const handleInvoke = async (browserWindow, command, args = {}) => {
 
     case 'desktop_set_window_title':
       if (browserWindow && typeof args.title === 'string') {
-        browserWindow.setTitle(args.title);
+        browserWindow.setTitle(IS_FORK ? `${APP_NAME} - ${args.title}` : args.title);
       }
       return null;
 
@@ -4864,6 +4874,7 @@ const handleInvoke = async (browserWindow, command, args = {}) => {
         }
         if (process.platform === 'win32' && app.isPackaged) {
           const jumpList = buildUnreadJumpList(args, {
+            protocol: DEEP_LINK_PROTOCOL,
             execPath: process.execPath, locale: normalizeMenuLocale(readPreferredLocale()),
             removedItems: app.getJumpListSettings().removedItems,
           });
@@ -5206,6 +5217,7 @@ const handleInvoke = async (browserWindow, command, args = {}) => {
     }
 
     case 'desktop_set_update_channel': {
+      if (IS_FORK) assertUpdaterCapability({ packaged: app.isPackaged });
       if (!isUpdateChannel(args?.channel)) {
         throw new Error('Unknown update channel');
       }
@@ -5217,6 +5229,7 @@ const handleInvoke = async (browserWindow, command, args = {}) => {
     }
 
     case 'desktop_check_for_updates': {
+      if (IS_FORK) return { available: false, currentVersion: APP_VERSION, version: null, updatesDisabled: true };
       assertUpdaterCapability({ packaged: app.isPackaged });
       // electron-updater answers a check that is already running, for the
       // feed it started on. A channel switched meanwhile waits for that check

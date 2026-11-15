@@ -10,6 +10,7 @@
 
 import { app, protocol } from 'electron';
 import path from 'node:path';
+import { APP_NAME, IS_FORK } from './desktop-flavour.mjs';
 import { plainChromeUserAgent } from './browser-panel-security.mjs';
 import { enableMainProcessCompileCache } from './compile-cache.mjs';
 import { shouldIgnoreLoopbackConnectionLimit } from './startup-url-selection.mjs';
@@ -30,7 +31,8 @@ recordEarlyStartupMark('electron.entry');
 // Set the product name early so electron-log derives its log directory as
 // ~/Library/Logs/OpenChamber/ (not ~/Library/Logs/@openchamber/electron/).
 const versionBeforeRename = app.getVersion();
-app.setName('OpenChamber');
+app.setName(APP_NAME);
+if (IS_FORK) app.setPath('userData', path.join(app.getPath('appData'), APP_NAME));
 // An unpackaged run on Linux reports version "0.0" after the rename, and
 // electron-updater refuses a version that is not semver, so the dev app quit
 // before its first window. Restoring the version from before the rename gives
@@ -49,7 +51,7 @@ if (process.platform === 'linux') {
 // has loaded, the default session keeps Electron's agent for its own requests.
 app.userAgentFallback = plainChromeUserAgent(app.userAgentFallback);
 if (isDev) {
-  app.setPath('userData', path.join(app.getPath('appData'), 'OpenChamber Dev'));
+  app.setPath('userData', path.join(app.getPath('appData'), `${APP_NAME} Dev`));
 }
 // Test hook for scripts/profile-startup.mjs: a packaged launch that must not
 // share the single-instance lock or the Chromium profile with the installed

@@ -137,6 +137,9 @@ export const registerOpenChamberRoutes = (app, dependencies) => {
   });
 
   app.get('/api/openchamber/update-check', async (req, res) => {
+    if (desktopUpdater?.updatesDisabled) {
+      return res.json({ available: false, updatesDisabled: true, packageManager: 'electron' });
+    }
     try {
       const parseString = (value) => (typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined);
       const parseReportUsage = (value) => {

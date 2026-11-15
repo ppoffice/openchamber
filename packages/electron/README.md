@@ -589,6 +589,30 @@ Add new native capabilities in this order:
 
 ## Update channels and Canary
 
+### Fork installer
+
+On Windows x64, set `OPENCHAMBER_DESKTOP_CHANNEL=fork` and run
+`bun run electron:build`. This produces an unsigned per-user NSIS installer
+for `OpenChamber Fork`, with app id `dev.openchamber.desktop.fork`, its own
+executable, shortcuts, uninstall entry and `openchamber-fork://` registration.
+The package name `openchamber-fork` gives NSIS a separate default install folder.
+The Electron profile and single-instance lock use `%APPDATA%/OpenChamber Fork`;
+OpenChamber data uses `~/.config/openchamber-fork`.
+The managed OpenCode process registry is explicitly rooted there too, through
+`OPENCHAMBER_MANAGED_PROCESS_REGISTRY`; that registry has its own override.
+
+The build bakes its identity and disabled-update policy into the main bundles.
+No runtime environment or saved update-channel setting can enable the updater.
+The staged UI skips checks and About shows that updates are off. Downloads and
+apply-update commands refuse, and the embedded server skips update feeds for
+every client app type. New fork builds are installed manually.
+
+#### Why the fork has a separate identity
+
+The fork is installed beside the release app, so its profile, data, protocol,
+AppUserModelID and installer identity must remain independent. Canary continues
+to share the official identity and update channels.
+
 The desktop app updates from one of two channels, chosen under Settings → About → Updates and stored as `desktopUpdateChannel` in `settings.json`:
 
 - **Stable**: the latest full release, read from its mirror on Cloudflare R2 (`https://downloads.openchamber.dev/desktop/stable/`, the `generic` provider), with the GitHub release as the fallback (the `github` provider). `release.yml`'s `finalize-release` copies the draft's desktop files and `latest*.yml` manifests there with `scripts/release-mirror/mirror-to-r2.mjs` before anything announces the release: publishing it, the Discord post and the website rebuild wait for the upload, and a failed upload leaves the release a draft (`.github/workflows/mirror-release.yml` mirrors a published release again by hand). The script uploads files first and manifests last, keeps the previous release whole (the website links its files until it is rebuilt) and deletes older releases' files except their `.blockmap`s, which a Windows update reads to download only the changed blocks. A check or download that fails on the mirror sends checks to GitHub for an hour (`pickUpdaterSource`, `updater-feed.mjs`); a missing manifest on the mirror counts as a failure there, while on GitHub it still means "no release for this platform yet".

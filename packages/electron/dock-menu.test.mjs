@@ -2,6 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildDockMenuTemplate, buildUnreadJumpList, isJumpListSessionId } from './dock-menu.mjs';
 
+test('fork jump lists launch only the fork protocol', () => {
+  const list = buildUnreadJumpList({ dockUnreadSessions: [{ id: 'ses_0', title: 'Chat' }] }, {
+    execPath: 'fork.exe', protocol: 'openchamber-fork',
+  });
+  assert.equal(list[0].items[0].args, '"openchamber-fork://session/ses_0?source=jump-list"');
+});
+
 test('empty and invalid snapshots have no Dock actions', () => {
   for (const snapshot of [null, {}, { dockUnreadSessions: [] }, { dockUnreadSessions: [null, { id: 'bad' }] }]) {
     assert.deepEqual(buildDockMenuTemplate(snapshot, { onAction() {} }), []);

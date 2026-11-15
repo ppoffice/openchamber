@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { IS_FORK } from './desktop-flavour.mjs';
 
 // electron-builder writes this file into the resources of .deb and .rpm builds;
 // electron-updater reads the same file to pick its package installer.
@@ -18,7 +19,9 @@ export const assertUpdaterCapability = ({
   packageType = readLinuxPackageType(),
   access = fs.accessSync,
   stat = fs.statSync,
+  updatesDisabled = IS_FORK,
 } = {}) => {
+  if (updatesDisabled) throw new Error('Updates are disabled in OpenChamber Fork. Install a new fork build manually.');
   if (platform !== 'linux' || !packaged) return;
 
   if (!appImagePath) {
