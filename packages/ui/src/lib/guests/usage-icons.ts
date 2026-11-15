@@ -14,17 +14,20 @@ import { useQuotaStore } from '@/stores/useQuotaStore';
 /**
  * The provider icons a `usage` snapshot carries, as `data:image/svg+xml` URLs.
  *
- * A built-in provider resolves exactly as the host's own `ProviderLogo` does
- * (`resolveProviderLogoUrls`): the bundled asset first, then the provider's
- * mark from models.dev, then none. The chosen URL is fetched once and inlined,
- * so the frame draws it without another origin; a failed fetch falls through
- * to the next source, as the host's `<img onError>` does. An extension
- * provider's icon is the one its card draws: a Remixicon from the host sprite,
- * or the package's SVG read with the runtime's credentials.
+ * A built-in provider resolves through `resolveProviderLogoUrls` like the
+ * host's own logo: the bundled asset first, then the provider's mark from
+ * models.dev, then none. The chosen URL is fetched once and inlined, so the
+ * frame draws it without another origin; a failed fetch falls through to the
+ * next source. Custom overrides are deliberately not used: an uploaded logo, a
+ * picked icon and an extension's `providerLogos` keep their own colours and
+ * shapes, and this feed's monochrome contract cannot carry them (see the SDK's
+ * `DOCUMENTATION.md`). An extension provider's icon is the one its card draws:
+ * a Remixicon from the host sprite, or the package's SVG read with the
+ * runtime's credentials.
  *
  * The SVGs are monochrome (`currentColor`, which resolves to black in an image
- * document) on a transparent background; the guest inverts them in dark mode,
- * as `ProviderLogo` does. That contract is in the SDK documentation.
+ * document) on a transparent background; the guest inverts them in dark mode.
+ * That contract is in the SDK documentation.
  */
 
 type IconMap = ReadonlyMap<string, string | null>;

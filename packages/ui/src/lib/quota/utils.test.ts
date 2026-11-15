@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { clampPercent, compactQuotaValueLabel, formatPercent, formatQuotaResetShort, formatQuotaValueLabel, formatWindowLabel, isKnownWindowLabel } from './utils';
+import { clampPercent, compactQuotaValueLabel, formatPercent, formatQuotaResetShort, formatQuotaValueLabel, formatWindowLabel } from './utils';
 import { formatMessage } from '@/lib/i18n';
 import { dict } from '@/lib/i18n/messages/en';
 
@@ -39,14 +39,9 @@ describe('quota utils', () => {
     expect(formatWindowLabel('30s')).toBe('30-Second Limit');
   });
 
-  test('knows the fixed and numeric window keys it translates', () => {
-    expect(isKnownWindowLabel('5h')).toBe(true);
-    expect(isKnownWindowLabel('premium_interactions')).toBe(true);
-    expect(isKnownWindowLabel('30d')).toBe(true);
-    expect(isKnownWindowLabel('12h')).toBe(true);
-    expect(isKnownWindowLabel('30s')).toBe(true);
-    expect(isKnownWindowLabel('custom')).toBe(false);
-    expect(isKnownWindowLabel('30m')).toBe(false);
+  test('preserves unknown window labels', () => {
+    expect(formatWindowLabel('custom')).toBe('custom');
+    expect(formatWindowLabel('30m')).toBe('30m');
   });
 });
 

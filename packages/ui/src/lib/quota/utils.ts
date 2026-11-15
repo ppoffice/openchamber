@@ -164,11 +164,6 @@ const WINDOW_LABEL_KEYS = new Map<string, I18nKey>([
 // Status translates them like its fixed keys.
 const DURATION_WINDOW = /^(\d+)([dhs])$/;
 
-/** A window key the host has a translated label for, fixed or numeric. */
-export const isKnownWindowLabel = (label: string): boolean => (
-  label === 'vibe' || WINDOW_LABEL_KEYS.has(label) || DURATION_WINDOW.test(label)
-);
-
 export const formatWindowLabel = (label: string): string => {
   // A product name, the same in every language.
   if (label === 'vibe') return 'Vibe';

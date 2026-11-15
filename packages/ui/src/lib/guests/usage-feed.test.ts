@@ -103,7 +103,7 @@ describe('buildGuestUsageSnapshot', () => {
     expect(provider.models[0].windows[0]).toMatchObject({ key: 'model-0-0', label: 'Weekly', usedPercent: 30 });
   });
 
-  test('formats a value from structured data and never forwards a provider valueLabel', () => {
+  test('formats structured values and passes extension window text through', () => {
     const email = 'user@example.com';
     const extAcme: QuotaProviderId = 'ext-acme';
     const snapshot = buildGuestUsageSnapshot(feed({
@@ -121,13 +121,10 @@ describe('buildGuestUsageSnapshot', () => {
     }));
 
     expect(snapshot.providers[0].windows[0].valueLabel).toBe('quota.value.spent');
-    expect(snapshot.providers[1].windows[0]).toMatchObject({ key: 'window-0', label: 'window-0', valueLabel: null });
-    const json = JSON.stringify(snapshot);
-    expect(json).not.toContain(email);
-    expect(json).not.toContain('AcmeOrg');
+    expect(snapshot.providers[1].windows[0]).toMatchObject({ key: 'window-0', label: 'AcmeOrg', valueLabel: email });
   });
 
-  test('built-in window labels match Work Status, extension labels stay opaque', () => {
+  test('built-in and extension window labels match Work Status', () => {
     const extAcme: QuotaProviderId = 'ext-acme';
     const snapshot = buildGuestUsageSnapshot(feed({
       providers: [meta('codex', 'Codex'), meta(extAcme, 'Acme')],
@@ -158,12 +155,11 @@ describe('buildGuestUsageSnapshot', () => {
     ]);
     expect(snapshot.providers[1].windows.map((window) => window.label)).toEqual([
       '30-Day Limit',
-      'window-1',
+      'AcmeOrg',
     ]);
-    expect(JSON.stringify(snapshot.providers[1])).not.toContain('AcmeOrg');
   });
 
-  test('built-in valueLabels pass through as Work Status shows them; extension ones do not', () => {
+  test('built-in and extension valueLabels pass through as Work Status shows them', () => {
     const extAcme: QuotaProviderId = 'ext-acme';
     const snapshot = buildGuestUsageSnapshot(feed({
       providers: [meta('codex', 'Codex'), meta(extAcme, 'Acme')],
@@ -180,8 +176,57 @@ describe('buildGuestUsageSnapshot', () => {
     }));
 
     expect(snapshot.providers[0].windows[0].valueLabel).toBe('$12.34');
-    expect(snapshot.providers[1].windows[0].valueLabel).toBeNull();
-    expect(JSON.stringify(snapshot.providers[1])).not.toContain('ops@example.com');
+    expect(snapshot.providers[1].windows[0].valueLabel).toBe('ops@example.com');
+  });
+
+  test('keeps the Venice amount-only window and omits its plan', () => {
+    const snapshot = buildGuestUsageSnapshot(feed({
+      providers: [meta('ext-venice-usage', 'Venice AI')],
+      results: [providerResult({
+        providerId: 'ext-venice-usage',
+        providerName: 'Venice AI',
+        planLabel: 'Paid',
+        usage: {
+          windows: {
+            credits_balance: usageWindow({
+              usedPercent: null,
+              remainingPercent: null,
+              valueLabel: '$4.11',
+            }),
+          },
+        },
+      })],
+    }));
+
+    expect(snapshot.providers[0].windows[0]).toMatchObject({
+      label: 'Credits Balance',
+      usedPercent: null,
+      remainingPercent: null,
+      valueLabel: '$4.11',
+    });
+    expect(JSON.stringify(snapshot)).not.toContain('Paid');
+    expect(JSON.stringify(snapshot)).not.toContain('planLabel');
+    expect(guestUsageSnapshotSchema.safeParse(snapshot).success).toBe(true);
+  });
+
+  test('truncates extension window and model text to the SDK label bound', () => {
+    const label = 'Custom balance '.repeat(12);
+    const valueLabel = '$4.11 '.repeat(30);
+    const snapshot = buildGuestUsageSnapshot(feed({
+      providers: [meta('ext-venice-usage', 'Venice AI')],
+      results: [providerResult({
+        providerId: 'ext-venice-usage',
+        usage: {
+          windows: { [label]: usageWindow({ valueLabel }) },
+          models: { model: { windows: { [label]: usageWindow({ valueLabel }) } } },
+        },
+      })],
+    }));
+    for (const window of [snapshot.providers[0].windows[0], snapshot.providers[0].models[0].windows[0]]) {
+      expect(window.label).toBe(label.slice(0, 120));
+      expect(window.valueLabel).toBe(valueLabel.slice(0, 120));
+    }
+    expect(guestUsageSnapshotSchema.safeParse(snapshot).success).toBe(true);
   });
 
   test('maps the Work Status tone thresholds on the used share', () => {
