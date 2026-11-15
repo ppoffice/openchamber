@@ -605,7 +605,7 @@ export const settingsDict = {
   'settings.openchamber.about.native.appVersion': '이 앱: {version}',
   'settings.openchamber.about.toast.serverLatestVersion': '서버가 최신 OpenChamber를 사용 중입니다',
   'settings.openchamber.about.toast.serverLatestAppUpdate': '서버는 최신 상태이며, 앱 업데이트가 있습니다',
-  'settings.openchamber.about.updatesDisabled': '{appName}의 업데이트가 꺼져 있습니다. 새 포크 빌드는 수동으로 설치하세요.',
+  'settings.openchamber.about.updatesDisabled': '{appName}의 업데이트가 꺼져 있습니다. 새 빌드는 수동으로 설치하세요.',
   'settings.openchamber.about.actions.checkForUpdates': '업데이트 확인',
   'settings.openchamber.about.toast.latestVersion': '최신 버전을 사용 중입니다',
   'settings.agents.sidebar.title': '에이전트',

@@ -637,7 +637,7 @@ export const settingsDict = {
   'settings.openchamber.about.native.appVersion': 'האפליקציה הזו: {version}',
   'settings.openchamber.about.toast.serverLatestVersion': 'בשרת פועלת הגרסה העדכנית של OpenChamber',
   'settings.openchamber.about.toast.serverLatestAppUpdate': 'השרת מעודכן, ויש עדכון לאפליקציה',
-  'settings.openchamber.about.updatesDisabled': 'העדכונים ב-{appName} כבויים. יש להתקין גרסאות חדשות של הפיצול ידנית.',
+  'settings.openchamber.about.updatesDisabled': 'העדכונים ב-{appName} כבויים. יש להתקין גרסאות חדשות ידנית.',
   'settings.openchamber.about.actions.checkForUpdates': 'בדוק אם יש עדכונים',
   'settings.openchamber.about.toast.latestVersion': 'הגרסה העדכנית כבר מותקנת',
   'settings.agents.sidebar.title': 'סוכנים',

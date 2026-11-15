@@ -610,7 +610,7 @@ export const settingsDict = {
   'settings.openchamber.about.native.appVersion': 'Bu uygulama: {version}',
   'settings.openchamber.about.toast.serverLatestVersion': 'Sunucu en son OpenChamber sürümünde',
   'settings.openchamber.about.toast.serverLatestAppUpdate': 'Sunucu güncel, uygulama için bir güncelleme var',
-  'settings.openchamber.about.updatesDisabled': '{appName} güncellemeleri kapalıdır. Yeni fork derlemelerini elle yükleyin.',
+  'settings.openchamber.about.updatesDisabled': '{appName} güncellemeleri kapalıdır. Yeni derlemeleri elle yükleyin.',
   'settings.openchamber.about.actions.checkForUpdates': 'Güncellemeleri kontrol et',
   'settings.openchamber.about.toast.latestVersion': 'En son sürümü kullanıyorsunuz',
   'settings.agents.sidebar.title': 'Agent\'lar',
