@@ -39,6 +39,7 @@ const CAPABILITY_ROWS = {
   links: { icon: 'link', titleKey: 'settings.extensions.capability.links', detailKey: 'settings.extensions.capability.links.detail' },
   wake: { icon: 'timer', titleKey: 'settings.extensions.capability.wake', detailKey: 'settings.extensions.capability.wake.detail' },
   marks: { icon: 'flag', titleKey: 'settings.extensions.capability.marks', detailKey: 'settings.extensions.capability.marks.detail' },
+  usage: { icon: 'line-chart', titleKey: 'settings.extensions.capability.usage', detailKey: 'settings.extensions.capability.usage.detail' },
 } satisfies Record<GuestCapability, { icon: IconName; titleKey: I18nKey; detailKey: I18nKey }>;
 
 type GuestApprovalDialogProps = {
